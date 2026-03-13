@@ -1,0 +1,1 @@
+aero = int(input("Enter sample here :"))
