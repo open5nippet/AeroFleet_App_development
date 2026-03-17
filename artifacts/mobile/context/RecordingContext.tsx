@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
+import * as Location from "expo-location";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { Platform } from "react-native";
 
 export type EventType = "harsh_brake" | "acceleration" | "crash" | "sos" | "manual";
 
@@ -31,6 +33,9 @@ const RecordingContext = createContext<RecordingContextType | null>(null);
 
 const EVENTS_KEY = "aerofleet_events";
 
+const MS_TO_KMH = 3.6;
+const SPEED_THRESHOLD_MS = 0.5;
+
 export function RecordingProvider({ children }: { children: React.ReactNode }) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -43,6 +48,7 @@ export function RecordingProvider({ children }: { children: React.ReactNode }) {
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sensorRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -59,11 +65,10 @@ export function RecordingProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
-  const startRecording = useCallback(() => {
+  const startRecording = useCallback(async () => {
     setIsRecording(true);
     setRecordingDuration(0);
-    setGpsActive(true);
-    setGpsCoords({ lat: 28.6139 + (Math.random() - 0.5) * 0.01, lng: 77.2090 + (Math.random() - 0.5) * 0.01 });
+    setSpeed(0);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     timerRef.current = setInterval(() => {
@@ -82,21 +87,55 @@ export function RecordingProvider({ children }: { children: React.ReactNode }) {
         y: Math.sin(t * 1.2) * 0.03,
         z: Math.sin(t * 0.6) * 0.04,
       });
-      setSpeed(40 + Math.sin(t * 0.3) * 20 + (Math.random() - 0.5) * 5);
-      setGpsCoords((prev) =>
-        prev
-          ? { lat: prev.lat + (Math.random() - 0.5) * 0.0001, lng: prev.lng + (Math.random() - 0.5) * 0.0001 }
-          : null
-      );
     }, 500);
+
+    if (Platform.OS === "web") {
+      setGpsActive(true);
+      setGpsCoords({ lat: 28.6139 + (Math.random() - 0.5) * 0.01, lng: 77.2090 + (Math.random() - 0.5) * 0.01 });
+      return;
+    }
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setGpsActive(false);
+        return;
+      }
+
+      setGpsActive(true);
+
+      locationSubRef.current = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.BestForNavigation,
+          timeInterval: 1000,
+          distanceInterval: 0,
+        },
+        (loc) => {
+          setGpsCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+
+          const rawSpeed = loc.coords.speed ?? 0;
+          const clampedSpeed = rawSpeed < SPEED_THRESHOLD_MS ? 0 : rawSpeed;
+          setSpeed(clampedSpeed * MS_TO_KMH);
+        }
+      );
+    } catch {
+      setGpsActive(false);
+    }
   }, []);
 
   const stopRecording = useCallback(() => {
     setIsRecording(false);
     setGpsActive(false);
     setSpeed(0);
+    setGpsCoords(null);
+
     if (timerRef.current) clearInterval(timerRef.current);
     if (sensorRef.current) clearInterval(sensorRef.current);
+    if (locationSubRef.current) {
+      locationSubRef.current.remove();
+      locationSubRef.current = null;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }, []);
 
@@ -124,6 +163,7 @@ export function RecordingProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (sensorRef.current) clearInterval(sensorRef.current);
+      if (locationSubRef.current) locationSubRef.current.remove();
     };
   }, []);
 
