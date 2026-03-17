@@ -1,4 +1,4 @@
-import { Ionicons, Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -14,42 +14,48 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import Colors from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import { useRecording } from "@/context/RecordingContext";
+import { ThemePreference, useTheme } from "@/context/ThemeContext";
 
 function MenuItem({
-  icon, label, value, color, onPress, danger,
+  icon, label, value, color, onPress, danger, tint, text, textMuted, backgroundCard, border,
 }: {
   icon: string; label: string; value?: string;
   color?: string; onPress?: () => void; danger?: boolean;
+  tint: string; text: string; textMuted: string; backgroundCard: string; border: string;
 }) {
-  const C = Colors.light;
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.menuItem, {
-        backgroundColor: C.backgroundCard,
-        borderColor: C.border,
+        backgroundColor: backgroundCard,
+        borderColor: border,
         opacity: pressed ? 0.75 : 1,
       }]}
     >
-      <View style={[styles.menuIcon, { backgroundColor: (color ?? C.tint) + "22" }]}>
-        <Ionicons name={icon as any} size={18} color={color ?? C.tint} />
+      <View style={[styles.menuIcon, { backgroundColor: (color ?? tint) + "22" }]}>
+        <Ionicons name={icon as any} size={18} color={color ?? tint} />
       </View>
-      <Text style={[styles.menuLabel, { color: danger ? C.danger : C.text, fontFamily: "Inter_500Medium" }]}>
+      <Text style={[styles.menuLabel, { color: danger ? "#FF3B30" : text, fontFamily: "Inter_500Medium" }]}>
         {label}
       </Text>
       {value ? (
-        <Text style={[styles.menuValue, { color: C.textMuted, fontFamily: "Inter_400Regular" }]}>{value}</Text>
+        <Text style={[styles.menuValue, { color: textMuted, fontFamily: "Inter_400Regular" }]}>{value}</Text>
       ) : null}
-      {!danger && <Ionicons name="chevron-forward" size={16} color={C.textMuted} />}
+      {!danger && <Ionicons name="chevron-forward" size={16} color={textMuted} />}
     </Pressable>
   );
 }
 
+const THEME_OPTIONS: { key: ThemePreference; label: string; icon: string }[] = [
+  { key: "light", label: "Light", icon: "sunny-outline" },
+  { key: "dark", label: "Dark", icon: "moon-outline" },
+  { key: "system", label: "System", icon: "phone-portrait-outline" },
+];
+
 export default function ProfileScreen() {
-  const C = Colors.light;
+  const { colors: C, theme, setTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const { driver, logout } = useAuth();
@@ -117,7 +123,7 @@ export default function ProfileScreen() {
             </Text>
           </View>
           <View style={[styles.scoreCard, { backgroundColor: C.backgroundCard, borderColor: C.border }]}>
-            <View style={[styles.scoreGradient, { backgroundColor: "rgba(0,212,255,0.1)", alignItems: "center", justifyContent: "center" }]}>
+            <View style={[styles.scoreGradient, { backgroundColor: C.tint + "1A", alignItems: "center", justifyContent: "center" }]}>
               <Text style={[styles.scoreNum, { color: C.tint, fontFamily: "Inter_700Bold" }]}>{events.length}</Text>
             </View>
             <Text style={[styles.scoreLabel, { color: C.textMuted, fontFamily: "Inter_400Regular" }]}>
@@ -139,13 +145,57 @@ export default function ProfileScreen() {
             DRIVER INFO
           </Text>
           <View style={styles.sectionItems}>
-            <MenuItem icon="person-outline" label="Driver ID" value={driver?.id?.slice(0, 12) ?? "---"} color={C.tint} />
-            <MenuItem icon="car-outline" label="Vehicle" value={driver?.vehicleId ?? "---"} color={C.tint} />
+            <MenuItem icon="person-outline" label="Driver ID" value={driver?.id?.slice(0, 12) ?? "---"} color={C.tint} tint={C.tint} text={C.text} textMuted={C.textMuted} backgroundCard={C.backgroundCard} border={C.border} />
+            <MenuItem icon="car-outline" label="Vehicle" value={driver?.vehicleId ?? "---"} color={C.tint} tint={C.tint} text={C.text} textMuted={C.textMuted} backgroundCard={C.backgroundCard} border={C.border} />
             <MenuItem
               icon="radio-button-on" label="Status"
               value={isRecording ? "Recording" : "Standby"}
               color={isRecording ? C.danger : C.success}
+              tint={C.tint} text={C.text} textMuted={C.textMuted} backgroundCard={C.backgroundCard} border={C.border}
             />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: C.textMuted, fontFamily: "Inter_500Medium" }]}>
+            APPEARANCE
+          </Text>
+          <View style={[styles.themeCard, { backgroundColor: C.backgroundCard, borderColor: C.border }]}>
+            <View style={styles.themeRow}>
+              {THEME_OPTIONS.map((opt) => {
+                const active = theme === opt.key;
+                return (
+                  <Pressable
+                    key={opt.key}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setTheme(opt.key);
+                    }}
+                    style={[
+                      styles.themePill,
+                      active
+                        ? { backgroundColor: C.tint, borderColor: C.tint }
+                        : { backgroundColor: C.backgroundElevated, borderColor: C.border },
+                    ]}
+                  >
+                    <Ionicons
+                      name={opt.icon as any}
+                      size={15}
+                      color={active ? "#fff" : C.textMuted}
+                    />
+                    <Text style={[
+                      styles.themePillText,
+                      { color: active ? "#fff" : C.textMuted, fontFamily: active ? "Inter_600SemiBold" : "Inter_400Regular" },
+                    ]}>
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={[styles.themeHint, { color: C.textMuted, fontFamily: "Inter_400Regular" }]}>
+              {theme === "system" ? "Follows your device appearance setting" : `Always use ${theme} mode`}
+            </Text>
           </View>
         </View>
 
@@ -154,10 +204,10 @@ export default function ProfileScreen() {
             APP SETTINGS
           </Text>
           <View style={styles.sectionItems}>
-            <MenuItem icon="notifications-outline" label="Alerts" color={C.warning} />
-            <MenuItem icon="cloud-upload-outline" label="Auto Upload" color="#8E8E93" value="On" />
-            <MenuItem icon="time-outline" label="Clip Duration" value="5 min" color="#8E8E93" />
-            <MenuItem icon="shield-checkmark-outline" label="Privacy" color={C.success} />
+            <MenuItem icon="notifications-outline" label="Alerts" color={C.warning} tint={C.tint} text={C.text} textMuted={C.textMuted} backgroundCard={C.backgroundCard} border={C.border} />
+            <MenuItem icon="cloud-upload-outline" label="Auto Upload" color="#8E8E93" value="On" tint={C.tint} text={C.text} textMuted={C.textMuted} backgroundCard={C.backgroundCard} border={C.border} />
+            <MenuItem icon="time-outline" label="Clip Duration" value="5 min" color="#8E8E93" tint={C.tint} text={C.text} textMuted={C.textMuted} backgroundCard={C.backgroundCard} border={C.border} />
+            <MenuItem icon="shield-checkmark-outline" label="Privacy" color={C.success} tint={C.tint} text={C.text} textMuted={C.textMuted} backgroundCard={C.backgroundCard} border={C.border} />
           </View>
         </View>
 
@@ -166,8 +216,8 @@ export default function ProfileScreen() {
             SUPPORT
           </Text>
           <View style={styles.sectionItems}>
-            <MenuItem icon="help-circle-outline" label="Help & FAQ" color={C.tint} />
-            <MenuItem icon="information-circle-outline" label="App Version" value="1.0.0" color="#8E8E93" />
+            <MenuItem icon="help-circle-outline" label="Help & FAQ" color={C.tint} tint={C.tint} text={C.text} textMuted={C.textMuted} backgroundCard={C.backgroundCard} border={C.border} />
+            <MenuItem icon="information-circle-outline" label="App Version" value="1.0.0" color="#8E8E93" tint={C.tint} text={C.text} textMuted={C.textMuted} backgroundCard={C.backgroundCard} border={C.border} />
           </View>
         </View>
 
@@ -213,6 +263,14 @@ const styles = StyleSheet.create({
   menuIcon: { width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   menuLabel: { flex: 1, fontSize: 15 },
   menuValue: { fontSize: 14 },
+  themeCard: { borderRadius: 16, padding: 16, borderWidth: 1, gap: 12 },
+  themeRow: { flexDirection: "row", gap: 10 },
+  themePill: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 6, paddingVertical: 10, borderRadius: 12, borderWidth: 1,
+  },
+  themePillText: { fontSize: 13 },
+  themeHint: { fontSize: 12, textAlign: "center" },
   logoutBtn: { marginBottom: 12 },
   logoutInner: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",

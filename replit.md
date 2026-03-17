@@ -95,23 +95,24 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 
 AeroFleet — AI-powered dashcam & fleet safety Expo React Native app.
 
-- **Theme**: Dark navy (`#0A0E1A`) with cyan accent (`#00D4FF`), Inter font
+- **Theme**: Dual dark/light themes; `context/ThemeContext.tsx` exports `useTheme()` with `colors`, `theme`, `setTheme`, `resolvedTheme`; persisted via AsyncStorage; `constants/colors.ts` exports `darkColors`/`lightColors`
 - **Auth**: `context/AuthContext.tsx` — simple session context with login/logout
 - **Recording**: `context/RecordingContext.tsx` — simulated GPS/sensor telemetry
-- **Screens** (5-tab layout via Expo Router):
+- **Screens** (5-tab layout via Expo Router, all use `useTheme().colors`):
   - `app/(tabs)/dashboard.tsx` — live telemetry metrics
-  - `app/(tabs)/camera.tsx` — recording with SOS button
+  - `app/(tabs)/camera.tsx` — recording with SOS button + quality selector (480p/720p/1080p/4K, persisted via AsyncStorage, tap quality badge in top-right)
   - `app/(tabs)/map.tsx` — A→B route planner (Mapbox Geocoding + Directions API)
   - `app/(tabs)/events.tsx` — safety events log
-  - `app/(tabs)/profile.tsx` — driver profile
+  - `app/(tabs)/profile.tsx` — driver profile with APPEARANCE section (Dark/Light/System pills)
 - **Map architecture**: Platform-specific components to avoid web bundling issues:
   - `components/RNMapView.native.tsx` — react-native-maps (iOS/Android only)
   - `components/RNMapView.tsx` — Mapbox Static Maps Image fallback (web)
   - `services/mapbox.ts` — Geocoding + Directions API helpers
 - **Intro splash**: `app/intro.tsx` — branded logo + video, auto-advances after 6s
-- **Tab layout**: `app/(tabs)/_layout.tsx` — NativeTabs (iOS 26+ liquid glass) with BlurView fallback
+- **Tab layout**: `app/(tabs)/_layout.tsx` — NativeTabs (iOS 26+ liquid glass) with BlurView (dark/light tint-aware) fallback
 - **Key env var**: `EXPO_PUBLIC_MAPBOX_KEY` (exposed from `MAPBOX_PUBLIC_KEY` secret in dev script)
 - **Gotchas**:
+  - `ThemeProvider` wraps root layout in `app/_layout.tsx`; `useTheme()` available in all screens
   - `react-native-maps@1.18.0` pinned, NOT in app.json plugins
   - Do NOT use `uuid` package (crashes native)
   - Do NOT use `useBottomTabBarHeight()` with NativeTabs

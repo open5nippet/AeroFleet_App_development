@@ -4,15 +4,15 @@ import React from "react";
 import {
   FlatList,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import Colors from "@/constants/colors";
 import { EventType, SafetyEvent, useRecording } from "@/context/RecordingContext";
+import { useTheme } from "@/context/ThemeContext";
+import { ColorScheme } from "@/constants/colors";
 
 const EVENT_CONFIG: Record<EventType, { label: string; icon: string; color: string; bg: string }> = {
   harsh_brake: { label: "Harsh Braking", icon: "warning", color: "#FF9500", bg: "rgba(255,149,0,0.15)" },
@@ -22,8 +22,7 @@ const EVENT_CONFIG: Record<EventType, { label: string; icon: string; color: stri
   manual: { label: "Manual Report", icon: "document-text", color: "#8E8E93", bg: "rgba(142,142,147,0.15)" },
 };
 
-function EventRow({ item }: { item: SafetyEvent }) {
-  const C = Colors.light;
+function EventRow({ item, C }: { item: SafetyEvent; C: ColorScheme }) {
   const cfg = EVENT_CONFIG[item.type];
   const date = new Date(item.timestamp);
 
@@ -63,7 +62,7 @@ function EventRow({ item }: { item: SafetyEvent }) {
 }
 
 export default function EventsScreen() {
-  const C = Colors.light;
+  const { colors: C } = useTheme();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const { events } = useRecording();
@@ -116,7 +115,7 @@ export default function EventsScreen() {
             </Text>
           </View>
         }
-        renderItem={({ item }) => <EventRow item={item} />}
+        renderItem={({ item }) => <EventRow item={item} C={C} />}
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         ListFooterComponent={<View style={{ height: Platform.OS === "web" ? 34 : 100 }} />}
         showsVerticalScrollIndicator={false}

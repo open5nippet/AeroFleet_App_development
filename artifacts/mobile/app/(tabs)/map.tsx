@@ -19,8 +19,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import Colors from "@/constants/colors";
 import RNMapView from "@/components/RNMapView";
+import { ColorScheme } from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import {
   Coordinates,
   GeocodeResult,
@@ -31,11 +32,10 @@ import {
   getRoute,
 } from "@/services/mapbox";
 
-const C = Colors.light;
 const IS_WEB = Platform.OS === "web";
 type SearchField = "origin" | "destination" | null;
 
-function SuggestionItem({ item, onPress }: { item: GeocodeResult; onPress: () => void }) {
+function SuggestionItem({ item, onPress, C }: { item: GeocodeResult; onPress: () => void; C: ColorScheme }) {
   const [name, ...rest] = item.place_name.split(",");
   return (
     <Pressable
@@ -45,7 +45,7 @@ function SuggestionItem({ item, onPress }: { item: GeocodeResult; onPress: () =>
         { backgroundColor: pressed ? C.backgroundElevated : C.backgroundCard, borderColor: C.border },
       ]}
     >
-      <View style={styles.suggIcon}>
+      <View style={[styles.suggIcon, { backgroundColor: C.tint + "1A" }]}>
         <Ionicons name="location-outline" size={14} color={C.tint} />
       </View>
       <View style={{ flex: 1 }}>
@@ -61,6 +61,7 @@ function SuggestionItem({ item, onPress }: { item: GeocodeResult; onPress: () =>
 }
 
 export default function MapScreen() {
+  const { colors: C } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const topPad = IS_WEB ? 67 : insets.top;
@@ -217,7 +218,7 @@ export default function MapScreen() {
               data={suggestions}
               keyExtractor={(i) => i.id}
               scrollEnabled={false}
-              renderItem={({ item }) => <SuggestionItem item={item} onPress={() => selectSuggestion(item)} />}
+              renderItem={({ item }) => <SuggestionItem item={item} C={C} onPress={() => selectSuggestion(item)} />}
               keyboardShouldPersistTaps="always"
             />
           )}
@@ -329,7 +330,9 @@ export default function MapScreen() {
       />
 
       <LinearGradient
-        colors={["rgba(10,14,26,0.93)", "rgba(10,14,26,0.85)", "rgba(10,14,26,0.3)", "transparent"]}
+        colors={C.isDark
+          ? ["rgba(10,14,26,0.93)", "rgba(10,14,26,0.85)", "rgba(10,14,26,0.3)", "transparent"]
+          : ["rgba(240,244,251,0.97)", "rgba(240,244,251,0.9)", "rgba(240,244,251,0.3)", "transparent"]}
         style={[styles.topGradient, { paddingTop: topPad + 8 }]}
       >
         <View style={{ paddingHorizontal: 16, gap: 8 }}>
@@ -364,7 +367,7 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0A0E1A" },
+  container: { flex: 1 },
   screenTitle: { fontSize: 26, marginBottom: 4 },
   screenSub: { fontSize: 13, marginBottom: 20 },
   topGradient: { paddingBottom: 16 },
@@ -374,7 +377,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1 },
   suggList: { borderRadius: 14, borderWidth: 1, overflow: "hidden" },
   suggItem: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1 },
-  suggIcon: { width: 28, height: 28, borderRadius: 8, backgroundColor: "rgba(0,212,255,0.1)", alignItems: "center", justifyContent: "center" },
+  suggIcon: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   suggName: { fontSize: 14 },
   suggSub: { fontSize: 11, marginTop: 1 },
   routeBtn: { borderRadius: 14, overflow: "hidden" },

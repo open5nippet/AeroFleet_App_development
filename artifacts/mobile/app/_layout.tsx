@@ -16,7 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/context/AuthContext";
 import { RecordingProvider } from "@/context/RecordingContext";
-import Colors from "@/constants/colors";
+import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -30,6 +30,27 @@ function RootLayoutNav() {
       <Stack.Screen name="login" />
       <Stack.Screen name="(tabs)" />
     </Stack>
+  );
+}
+
+function AppShell() {
+  const { colors } = useTheme();
+  return (
+    <SafeAreaProvider style={{ backgroundColor: colors.background }}>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <KeyboardProvider>
+              <AuthProvider>
+                <RecordingProvider>
+                  <RootLayoutNav />
+                </RecordingProvider>
+              </AuthProvider>
+            </KeyboardProvider>
+          </GestureHandlerRootView>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }
 
@@ -50,20 +71,8 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <SafeAreaProvider style={{ backgroundColor: Colors.light.background }}>
-      <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <KeyboardProvider>
-              <AuthProvider>
-                <RecordingProvider>
-                  <RootLayoutNav />
-                </RecordingProvider>
-              </AuthProvider>
-            </KeyboardProvider>
-          </GestureHandlerRootView>
-        </QueryClientProvider>
-      </ErrorBoundary>
-    </SafeAreaProvider>
+    <ThemeProvider>
+      <AppShell />
+    </ThemeProvider>
   );
 }

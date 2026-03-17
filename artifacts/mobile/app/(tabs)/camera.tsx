@@ -1,4 +1,5 @@
-import { Ionicons, Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -15,8 +16,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
-import Colors from "@/constants/colors";
 import { useRecording } from "@/context/RecordingContext";
+import { useTheme } from "@/context/ThemeContext";
+
+type VideoQuality = "480p" | "720p" | "1080p" | "4K";
+const QUALITY_OPTIONS: VideoQuality[] = ["480p", "720p", "1080p", "4K"];
+const QUALITY_KEY = "aerofleet_camera_quality";
 
 function formatDuration(seconds: number) {
   const h = Math.floor(seconds / 3600);
@@ -27,7 +32,7 @@ function formatDuration(seconds: number) {
 }
 
 export default function CameraScreen() {
-  const C = Colors.light;
+  const { colors: C } = useTheme();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -37,15 +42,29 @@ export default function CameraScreen() {
     useRecording();
 
   const [sosPressed, setSosPressed] = useState(false);
+  const [videoQuality, setVideoQuality] = useState<VideoQuality>("1080p");
+  const [showQualityPicker, setShowQualityPicker] = useState(false);
+  const qualityPanelAnim = useRef(new Animated.Value(0)).current;
   const sosAnim = useRef(new Animated.Value(1)).current;
   const recPulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(QUALITY_KEY);
+        if (stored && QUALITY_OPTIONS.includes(stored as VideoQuality)) {
+          setVideoQuality(stored as VideoQuality);
+        }
+      } catch {}
+    })();
+  }, []);
 
   useEffect(() => {
     if (isRecording) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(recPulse, { toValue: 1.15, duration: 700, useNativeDriver: true }),
-          Animated.timing(recPulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+          Animated.timing(recPulse, { toValue: 1.15, duration: 700, useNativeDriver: Platform.OS !== "web" }),
+          Animated.timing(recPulse, { toValue: 1, duration: 700, useNativeDriver: Platform.OS !== "web" }),
         ])
       ).start();
     } else {
@@ -53,16 +72,35 @@ export default function CameraScreen() {
     }
   }, [isRecording]);
 
+  const openQualityPicker = () => {
+    setShowQualityPicker(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Animated.spring(qualityPanelAnim, { toValue: 1, useNativeDriver: Platform.OS !== "web", tension: 60, friction: 10 }).start();
+  };
+
+  const closeQualityPicker = () => {
+    Animated.timing(qualityPanelAnim, { toValue: 0, duration: 200, useNativeDriver: Platform.OS !== "web" }).start(() => {
+      setShowQualityPicker(false);
+    });
+  };
+
+  const selectQuality = async (q: VideoQuality) => {
+    Haptics.selectionAsync();
+    setVideoQuality(q);
+    try { await AsyncStorage.setItem(QUALITY_KEY, q); } catch {}
+    closeQualityPicker();
+  };
+
   const handleSOS = () => {
     if (sosPressed) return;
     setSosPressed(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     triggerSOS();
     Animated.sequence([
-      Animated.timing(sosAnim, { toValue: 1.2, duration: 100, useNativeDriver: true }),
-      Animated.timing(sosAnim, { toValue: 1, duration: 100, useNativeDriver: true }),
-      Animated.timing(sosAnim, { toValue: 1.15, duration: 100, useNativeDriver: true }),
-      Animated.timing(sosAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+      Animated.timing(sosAnim, { toValue: 1.2, duration: 100, useNativeDriver: Platform.OS !== "web" }),
+      Animated.timing(sosAnim, { toValue: 1, duration: 100, useNativeDriver: Platform.OS !== "web" }),
+      Animated.timing(sosAnim, { toValue: 1.15, duration: 100, useNativeDriver: Platform.OS !== "web" }),
+      Animated.timing(sosAnim, { toValue: 1, duration: 150, useNativeDriver: Platform.OS !== "web" }),
     ]).start();
     setTimeout(() => setSosPressed(false), 3000);
     Alert.alert("🚨 SOS Sent", "Emergency alert uploaded. Help is on the way.", [{ text: "OK" }]);
@@ -91,7 +129,7 @@ export default function CameraScreen() {
     return (
       <View style={[styles.centered, { backgroundColor: C.background, paddingTop: topPad }]}>
         <View style={[styles.permBox, { backgroundColor: C.backgroundCard, borderColor: C.border }]}>
-          <View style={[styles.permIcon, { backgroundColor: "rgba(0,212,255,0.1)" }]}>
+          <View style={[styles.permIcon, { backgroundColor: C.tint + "1A" }]}>
             <Ionicons name="camera" size={32} color={C.tint} />
           </View>
           <Text style={[styles.permTitle, { color: C.text, fontFamily: "Inter_600SemiBold" }]}>Camera Access</Text>
@@ -112,6 +150,11 @@ export default function CameraScreen() {
       </View>
     );
   }
+
+  const panelTranslate = qualityPanelAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [200, 0],
+  });
 
   return (
     <View style={styles.container}>
@@ -158,6 +201,13 @@ export default function CameraScreen() {
                 </Text>
               </View>
             )}
+            <Pressable
+              onPress={openQualityPicker}
+              style={[styles.qualityBadge, { backgroundColor: "rgba(0,0,0,0.55)" }]}
+            >
+              <Ionicons name="videocam-outline" size={12} color="rgba(255,255,255,0.8)" />
+              <Text style={[styles.qualityText, { fontFamily: "Inter_600SemiBold" }]}>{videoQuality}</Text>
+            </Pressable>
             <View style={[styles.gpsBadge, { backgroundColor: gpsActive ? "rgba(52,199,89,0.3)" : "rgba(0,0,0,0.4)" }]}>
               <Ionicons name="location" size={12} color={gpsActive ? "#34C759" : "rgba(255,255,255,0.4)"} />
               <Text style={[styles.gpsText, { color: gpsActive ? "#34C759" : "rgba(255,255,255,0.4)", fontFamily: "Inter_500Medium" }]}>
@@ -177,8 +227,8 @@ export default function CameraScreen() {
             onPress={() => handleEvent("harsh_brake")}
             style={({ pressed }) => [styles.eventBtn, { opacity: pressed ? 0.7 : 1, backgroundColor: "rgba(255,149,0,0.2)", borderColor: "rgba(255,149,0,0.5)" }]}
           >
-            <Ionicons name="warning" size={16} color={Colors.light.warning} />
-            <Text style={[styles.eventBtnText, { color: Colors.light.warning, fontFamily: "Inter_500Medium" }]}>
+            <Ionicons name="warning" size={16} color="#FF9500" />
+            <Text style={[styles.eventBtnText, { color: "#FF9500", fontFamily: "Inter_500Medium" }]}>
               Harsh Brake
             </Text>
           </Pressable>
@@ -186,8 +236,8 @@ export default function CameraScreen() {
             onPress={() => handleEvent("acceleration")}
             style={({ pressed }) => [styles.eventBtn, { opacity: pressed ? 0.7 : 1, backgroundColor: "rgba(0,212,255,0.15)", borderColor: "rgba(0,212,255,0.4)" }]}
           >
-            <Ionicons name="flash" size={16} color={Colors.light.tint} />
-            <Text style={[styles.eventBtnText, { color: Colors.light.tint, fontFamily: "Inter_500Medium" }]}>
+            <Ionicons name="flash" size={16} color="#00D4FF" />
+            <Text style={[styles.eventBtnText, { color: "#00D4FF", fontFamily: "Inter_500Medium" }]}>
               Accel
             </Text>
           </Pressable>
@@ -228,6 +278,62 @@ export default function CameraScreen() {
           <View style={styles.controlSide} />
         </View>
       </LinearGradient>
+
+      {showQualityPicker && (
+        <Pressable style={styles.qualityBackdrop} onPress={closeQualityPicker}>
+          <Animated.View
+            style={[
+              styles.qualityPanel,
+              { transform: [{ translateY: panelTranslate }] },
+            ]}
+          >
+            <View style={styles.qualityPanelHandle} />
+            <Text style={[styles.qualityPanelTitle, { fontFamily: "Inter_700Bold" }]}>
+              Recording Quality
+            </Text>
+            <Text style={[styles.qualityPanelSubtitle, { fontFamily: "Inter_400Regular" }]}>
+              Higher quality uses more storage
+            </Text>
+            <View style={styles.qualityOptions}>
+              {QUALITY_OPTIONS.map((q) => {
+                const active = videoQuality === q;
+                const labels: Record<VideoQuality, string> = {
+                  "480p": "Standard · 854×480 · Low storage",
+                  "720p": "HD · 1280×720 · Balanced",
+                  "1080p": "Full HD · 1920×1080 · Recommended",
+                  "4K": "4K UHD · 3840×2160 · High quality",
+                };
+                return (
+                  <Pressable
+                    key={q}
+                    onPress={() => selectQuality(q)}
+                    style={({ pressed }) => [
+                      styles.qualityOption,
+                      active
+                        ? { borderColor: "#00D4FF", backgroundColor: "rgba(0,212,255,0.12)" }
+                        : { borderColor: "rgba(255,255,255,0.12)", backgroundColor: "rgba(255,255,255,0.04)" },
+                      { opacity: pressed ? 0.75 : 1 },
+                    ]}
+                  >
+                    <View style={styles.qualityOptionLeft}>
+                      <View style={[styles.qualityDot, { backgroundColor: active ? "#00D4FF" : "rgba(255,255,255,0.3)" }]} />
+                      <View>
+                        <Text style={[styles.qualityOptionLabel, { color: active ? "#00D4FF" : "#fff", fontFamily: "Inter_600SemiBold" }]}>
+                          {q}
+                        </Text>
+                        <Text style={[styles.qualityOptionDesc, { color: "rgba(255,255,255,0.5)", fontFamily: "Inter_400Regular" }]}>
+                          {labels[q]}
+                        </Text>
+                      </View>
+                    </View>
+                    {active && <Ionicons name="checkmark-circle" size={20} color="#00D4FF" />}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Animated.View>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -265,6 +371,11 @@ const styles = StyleSheet.create({
   },
   speedVal: { fontSize: 20, lineHeight: 24 },
   speedUnit: { fontSize: 10 },
+  qualityBadge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 9, paddingVertical: 5, borderRadius: 8,
+  },
+  qualityText: { color: "#fff", fontSize: 11 },
   gpsBadge: {
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
@@ -292,4 +403,35 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   sosBtnText: { color: "#fff", fontSize: 22 },
+  qualityBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  qualityPanel: {
+    backgroundColor: "#0E1525",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    paddingBottom: 40,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+    gap: 4,
+  },
+  qualityPanelHandle: {
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    alignSelf: "center", marginBottom: 16,
+  },
+  qualityPanelTitle: { fontSize: 18, color: "#fff", marginBottom: 2 },
+  qualityPanelSubtitle: { fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 16 },
+  qualityOptions: { gap: 10 },
+  qualityOption: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    borderRadius: 14, borderWidth: 1, padding: 14,
+  },
+  qualityOptionLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+  qualityDot: { width: 10, height: 10, borderRadius: 5 },
+  qualityOptionLabel: { fontSize: 16, marginBottom: 2 },
+  qualityOptionDesc: { fontSize: 12 },
 });

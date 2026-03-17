@@ -7,7 +7,7 @@ import { Ionicons, Feather } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, useWindowDimensions, View } from "react-native";
 
-import Colors from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 
 function NativeTabLayout() {
   return (
@@ -37,7 +37,7 @@ function NativeTabLayout() {
 }
 
 function ClassicTabLayout() {
-  const C = Colors.light;
+  const { colors: C } = useTheme();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const { width } = useWindowDimensions();
@@ -60,7 +60,7 @@ function ClassicTabLayout() {
         },
         tabBarBackground: () =>
           isIOS ? (
-            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={80} tint={C.isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
           ) : isWeb ? (
             <View style={[StyleSheet.absoluteFill, { backgroundColor: C.backgroundSecondary }]} />
           ) : null,

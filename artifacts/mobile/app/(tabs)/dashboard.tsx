@@ -1,4 +1,4 @@
-import { Ionicons, Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef } from "react";
@@ -13,9 +13,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import Colors from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 import { useRecording } from "@/context/RecordingContext";
+import { useTheme } from "@/context/ThemeContext";
+import { ColorScheme } from "@/constants/colors";
 
 function formatDuration(seconds: number) {
   const h = Math.floor(seconds / 3600);
@@ -26,9 +27,8 @@ function formatDuration(seconds: number) {
 }
 
 function SensorCard({
-  label, icon, value, unit, color,
-}: { label: string; icon: string; value: string; unit: string; color: string }) {
-  const C = Colors.light;
+  label, icon, value, unit, color, C,
+}: { label: string; icon: string; value: string; unit: string; color: string; C: ColorScheme }) {
   return (
     <View style={[sensorStyles.card, { backgroundColor: C.backgroundCard, borderColor: C.border }]}>
       <View style={[sensorStyles.iconCircle, { backgroundColor: color + "22" }]}>
@@ -54,7 +54,7 @@ const sensorStyles = StyleSheet.create({
 });
 
 export default function DashboardScreen() {
-  const C = Colors.light;
+  const { colors: C } = useTheme();
   const insets = useSafeAreaInsets();
   const { driver } = useAuth();
   const {
@@ -70,8 +70,8 @@ export default function DashboardScreen() {
     if (isRecording) {
       const anim = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.12, duration: 800, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1.12, duration: 800, useNativeDriver: Platform.OS !== "web" }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: Platform.OS !== "web" }),
         ])
       );
       anim.start();
@@ -82,6 +82,7 @@ export default function DashboardScreen() {
   }, [isRecording]);
 
   const handleToggle = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (isRecording) stopRecording();
     else startRecording();
   };
@@ -160,44 +161,21 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.sensorGrid}>
-          <SensorCard
-            label="Speed"
-            icon="speedometer-outline"
-            value={isRecording ? speed.toFixed(0) : "0"}
-            unit="km/h"
-            color={C.tint}
-          />
-          <SensorCard
-            label="G-Force"
-            icon="analytics-outline"
-            value={isRecording ? accelMag.toFixed(2) : "0.00"}
-            unit="m/s²"
-            color={C.warning}
-          />
+          <SensorCard C={C} label="Speed" icon="speedometer-outline" value={isRecording ? speed.toFixed(0) : "0"} unit="km/h" color={C.tint} />
+          <SensorCard C={C} label="G-Force" icon="analytics-outline" value={isRecording ? accelMag.toFixed(2) : "0.00"} unit="m/s²" color={C.warning} />
         </View>
         <View style={styles.sensorGrid}>
-          <SensorCard
-            label="Accel X"
-            icon="arrow-forward-outline"
-            value={isRecording ? accelerometerData.x.toFixed(3) : "0.000"}
-            unit="g"
-            color={C.success}
-          />
-          <SensorCard
-            label="Accel Z"
-            icon="arrow-up-outline"
-            value={isRecording ? accelerometerData.z.toFixed(3) : "0.000"}
-            unit="g"
-            color={C.success}
-          />
+          <SensorCard C={C} label="Accel X" icon="arrow-forward-outline" value={isRecording ? accelerometerData.x.toFixed(3) : "0.000"} unit="g" color={C.success} />
+          <SensorCard C={C} label="Accel Z" icon="arrow-up-outline" value={isRecording ? accelerometerData.z.toFixed(3) : "0.000"} unit="g" color={C.success} />
         </View>
+
         <View style={[styles.gpsCard, { backgroundColor: C.backgroundCard, borderColor: gpsActive ? C.borderStrong : C.border }]}>
           <View style={styles.gpsHeader}>
-            <View style={[styles.gpsIconCircle, { backgroundColor: gpsActive ? "rgba(0,212,255,0.15)" : "rgba(255,255,255,0.05)" }]}>
+            <View style={[styles.gpsIconCircle, { backgroundColor: gpsActive ? "rgba(0,212,255,0.15)" : C.backgroundElevated }]}>
               <Ionicons name="location" size={16} color={gpsActive ? C.tint : C.textMuted} />
             </View>
             <Text style={[styles.gpsTitle, { color: C.text, fontFamily: "Inter_600SemiBold" }]}>GPS Tracking</Text>
-            <View style={[styles.gpsBadge, { backgroundColor: gpsActive ? "rgba(52,199,89,0.15)" : "rgba(255,255,255,0.05)" }]}>
+            <View style={[styles.gpsBadge, { backgroundColor: gpsActive ? "rgba(52,199,89,0.15)" : C.backgroundElevated }]}>
               <View style={[styles.gpsDot, { backgroundColor: gpsActive ? C.success : C.textMuted }]} />
               <Text style={[styles.gpsStatus, { color: gpsActive ? C.success : C.textMuted, fontFamily: "Inter_500Medium" }]}>
                 {gpsActive ? "Active" : "Inactive"}

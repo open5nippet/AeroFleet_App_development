@@ -5,7 +5,6 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,11 +15,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import Colors from "@/constants/colors";
+import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const { colors: C } = useTheme();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,8 +49,6 @@ export default function LoginScreen() {
       setIsLoading(false);
     }
   };
-
-  const C = Colors.light;
 
   return (
     <View style={[styles.container, { backgroundColor: C.background }]}>
@@ -139,11 +137,11 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.footer}>
-          <View style={styles.footerDot} />
+          <View style={[styles.footerDot, { backgroundColor: C.border }]} />
           <Text style={[styles.footerText, { color: C.textMuted, fontFamily: "Inter_400Regular" }]}>
             Secure • Encrypted • Monitored
           </Text>
-          <View style={styles.footerDot} />
+          <View style={[styles.footerDot, { backgroundColor: C.border }]} />
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -179,6 +177,6 @@ const styles = StyleSheet.create({
   loginBtnText: { color: "#fff", fontSize: 16 },
   hint: { textAlign: "center", fontSize: 12, marginTop: 16 },
   footer: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 24 },
-  footerDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.2)" },
+  footerDot: { width: 4, height: 4, borderRadius: 2 },
   footerText: { fontSize: 12 },
 });
