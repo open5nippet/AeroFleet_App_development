@@ -12,7 +12,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
 import { useRecording } from "@/context/RecordingContext";
@@ -172,17 +172,14 @@ const bannerStyles = StyleSheet.create({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
   const { colors: C } = useTheme();
-  const insets = useSafeAreaInsets();
   const { driver } = useAuth();
   const {
     isRecording, recordingDuration, gpsActive, gpsCoords,
     speed, accelerometerData, gyroscopeData, events,
     startRecording, stopRecording,
   } = useRecording();
-
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   const [alertMsg, setAlertMsg] = useState<string | null>(null);
   const [maxSpeed, setMaxSpeed] = useState(0);
@@ -248,7 +245,7 @@ export default function DashboardScreen() {
   const clipNum = Math.floor(recordingDuration / 300) + 1;
 
   return (
-    <View style={[styles.container, { backgroundColor: C.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: C.background }]} edges={["top"]}>
       <Head>
         <title>Dashboard | AeroFleet</title>
         <meta name="description" content="Live dashcam telemetry, GPS tracking, speed, G-force sensors and fleet safety status for AeroFleet drivers." />
@@ -259,7 +256,7 @@ export default function DashboardScreen() {
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.scroll, { paddingTop: topPad + 16 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: Platform.OS === "web" ? 83 : 16 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Alert Banner */}
@@ -462,7 +459,7 @@ export default function DashboardScreen() {
 
         <View style={{ height: Platform.OS === "web" ? 34 : 100 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

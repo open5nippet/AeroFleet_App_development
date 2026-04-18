@@ -13,7 +13,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { EventType, SafetyEvent, useRecording } from "@/context/RecordingContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -102,8 +102,6 @@ const rowStyles = StyleSheet.create({
 
 export default function EventsScreen() {
   const { colors: C } = useTheme();
-  const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
   const { events, markEventsRead, clearAllEvents } = useRecording();
   const [filter, setFilter] = useState<EventType | "all">("all");
 
@@ -143,7 +141,7 @@ export default function EventsScreen() {
   const accelCount = events.filter((e) => e.type === "acceleration").length;
 
   return (
-    <View style={[styles.container, { backgroundColor: C.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: C.background }]} edges={["top"]}>
       <Head>
         <title>Safety Events | AeroFleet</title>
         <meta name="description" content="View all safety events including SOS alerts, harsh braking, and sudden acceleration logged by AeroFleet during your drive sessions." />
@@ -155,7 +153,7 @@ export default function EventsScreen() {
         data={filtered}
         keyExtractor={(item) => item.id}
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={[styles.listContent, { paddingTop: topPad + 16 }]}
+        contentContainerStyle={[styles.listContent, { paddingTop: Platform.OS === "web" ? 83 : 16 }]}
         ListHeaderComponent={
           <>
             {/* Header Row */}
@@ -267,7 +265,7 @@ export default function EventsScreen() {
         ListFooterComponent={<View style={{ height: Platform.OS === "web" ? 34 : 100 }} />}
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

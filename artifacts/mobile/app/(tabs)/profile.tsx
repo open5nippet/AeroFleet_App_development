@@ -14,7 +14,7 @@ import {
   View,
   Image,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -102,8 +102,6 @@ const THEME_OPTIONS: { key: ThemePreference; label: string; icon: string }[] = [
 
 export default function ProfileScreen() {
   const { colors: C, theme, setTheme } = useTheme();
-  const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
   const { driver, logout } = useAuth();
   const { events, isRecording, recordingDuration, speed, stopRecording, clearAllEvents } = useRecording();
 
@@ -237,7 +235,7 @@ export default function ProfileScreen() {
   const safeScore = Math.max(0, 100 - events.filter((e) => e.type !== "manual").length * 5);
 
   return (
-    <View style={[styles.container, { backgroundColor: C.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: C.background }]} edges={["top"]}>
       <Head>
         <title>Profile | AeroFleet</title>
         <meta name="description" content="Driver profile, safety score, theme settings and account management for AeroFleet fleet drivers." />
@@ -246,7 +244,7 @@ export default function ProfileScreen() {
       </Head>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={[styles.scroll, { paddingTop: topPad + 20 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: Platform.OS === "web" ? 87 : 16 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.avatarArea}>
@@ -470,7 +468,7 @@ export default function ProfileScreen() {
 
         <View style={{ height: Platform.OS === "web" ? 34 : 100 }} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
