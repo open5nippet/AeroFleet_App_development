@@ -37,6 +37,8 @@ function NativeTabLayout() {
   );
 }
 
+import { CustomTabBar } from "@/components/CustomTabBar";
+
 function ClassicTabLayout() {
   const { colors: C } = useTheme();
   const { unreadCount } = useRecording();
@@ -48,25 +50,10 @@ function ClassicTabLayout() {
 
   return (
     <Tabs
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: C.tint,
-        tabBarInactiveTintColor: C.tabIconDefault,
-        tabBarLabelStyle: { fontFamily: "Inter_500Medium", fontSize: isSmall ? 9 : 10 },
-        tabBarStyle: {
-          position: "absolute",
-          backgroundColor: isIOS ? "transparent" : C.backgroundSecondary,
-          borderTopWidth: isWeb ? 1 : 0,
-          borderTopColor: C.border,
-          elevation: 0,
-          ...(isWeb ? { height: 84 } : {}),
-        },
-        tabBarBackground: () =>
-          isIOS ? (
-            <BlurView intensity={80} tint={C.isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
-          ) : isWeb ? (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: C.backgroundSecondary }]} />
-          ) : null,
+        tabBarStyle: { display: 'none' }, // CustomTabBar owns all rendering
       }}
     >
       <Tabs.Screen

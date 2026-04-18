@@ -22,6 +22,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRecording } from "@/context/RecordingContext";
 import { ThemePreference, useTheme } from "@/context/ThemeContext";
 import { ColorScheme } from "@/constants/colors";
+import { TAB_BAR_BOTTOM_OFFSET } from "@/components/CustomTabBar";
 
 // ─── Achievement Badge ─────────────────────────────────────────────────────
 function AchievementBadge({
@@ -466,7 +467,7 @@ export default function ProfileScreen() {
           </View>
         </Pressable>
 
-        <View style={{ height: Platform.OS === "web" ? 34 : 100 }} />
+        <View style={{ height: TAB_BAR_BOTTOM_OFFSET }} />
       </ScrollView>
     </SafeAreaView>
   );

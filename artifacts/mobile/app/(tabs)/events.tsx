@@ -19,6 +19,7 @@ import { EventType, SafetyEvent, useRecording } from "@/context/RecordingContext
 import { useTheme } from "@/context/ThemeContext";
 import { ColorScheme } from "@/constants/colors";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { TAB_BAR_BOTTOM_OFFSET } from "@/components/CustomTabBar";
 
 const EVENT_CONFIG: Record<EventType, { label: string; icon: string; color: string; bg: string }> = {
   harsh_brake: { label: "Harsh Braking", icon: "warning", color: "#FF9500", bg: "rgba(255,149,0,0.15)" },
@@ -262,7 +263,7 @@ export default function EventsScreen() {
         }
         renderItem={({ item }) => <EventRow item={item} C={C} />}
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-        ListFooterComponent={<View style={{ height: Platform.OS === "web" ? 34 : 100 }} />}
+        ListFooterComponent={<View style={{ height: TAB_BAR_BOTTOM_OFFSET }} />}
         showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>

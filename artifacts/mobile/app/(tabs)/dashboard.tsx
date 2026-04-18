@@ -18,6 +18,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRecording } from "@/context/RecordingContext";
 import { useTheme } from "@/context/ThemeContext";
 import { ColorScheme } from "@/constants/colors";
+import { TAB_BAR_BOTTOM_OFFSET } from "@/components/CustomTabBar";
 
 function formatDuration(seconds: number) {
   const h = Math.floor(seconds / 3600);
@@ -457,7 +458,7 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        <View style={{ height: Platform.OS === "web" ? 34 : 100 }} />
+        <View style={{ height: TAB_BAR_BOTTOM_OFFSET }} />
       </ScrollView>
     </SafeAreaView>
   );
