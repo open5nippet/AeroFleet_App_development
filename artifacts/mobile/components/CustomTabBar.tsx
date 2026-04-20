@@ -23,6 +23,7 @@ import Svg, { Path, G } from 'react-native-svg';
 const BAR_SIZE     = 76;   // Thickness of the bar (height in P, width in L)
 const OVERREACH    = 38;   // Space for the crater curves
 const TOTAL_SIZE   = BAR_SIZE + OVERREACH;
+const RAIL_THICKNESS = 56; // Narrow rail width for landscape
 
 const NOTCH_HALF_W = 68;
 const NOTCH_DEPTH  = 30;
@@ -91,19 +92,12 @@ function buildHorizontalPath(cx: number, screenW: number, extraB: number): strin
 
 function buildVerticalPath(cy: number, screenH: number): string {
   const left = OVERREACH; 
-  const deep = left + NOTCH_DEPTH;
-  const w = NOTCH_HALF_W;
-  const ty = cy - w;
-  const by = cy + w;
   const right = TOTAL_SIZE;
 
-  // Carves into the bar from the right edge
-  // We flip this G-group for left rail placement
+  // In landscape (narrow rail), use a simple straight edge instead of curved notch
+  // This gives a cleaner, modern look for the narrow vertical rail
   return [
-    `M ${right} 0 L ${left} 0 L ${left} ${ty}`,
-    `C ${left} ${ty + w * 0.45}, ${deep} ${cy - w * 0.18}, ${deep} ${cy}`,
-    `C ${deep} ${cy + w * 0.18}, ${left} ${by - w * 0.45}, ${left} ${by}`,
-    `L ${left} ${screenH} L ${right} ${screenH} Z`,
+    `M ${right} 0 L ${left} 0 L ${left} ${screenH} L ${right} ${screenH} Z`,
   ].join(' ');
 }
 
@@ -120,10 +114,10 @@ export const CustomTabBar = ({ state, descriptors, navigation }: Props) => {
 
   const notchPos = useRef(new Animated.Value(state.index * itemSize + itemSize / 2)).current;
   const floatAnims = useRef<Animated.Value[]>(
-    state.routes.map((_, i) => new Animated.Value(i === state.index ? FLOAT_DIST : 0))
+    state.routes.map((_: any, i: number) => new Animated.Value(i === state.index ? FLOAT_DIST : 0))
   ).current;
   const labelScale = useRef<Animated.Value[]>(
-    state.routes.map(() => new Animated.Value(1))
+    state.routes.map((_: any) => new Animated.Value(1))
   ).current;
 
   const [svgPath, setSvgPath] = React.useState('');
@@ -169,7 +163,7 @@ export const CustomTabBar = ({ state, descriptors, navigation }: Props) => {
       style={[
         styles.wrapper,
         isLandscape 
-          ? { top: 0, bottom: 0, left: 0, width: TOTAL_SIZE + insets.left }
+          ? { top: insets.top, bottom: 0, left: 0, width: TOTAL_SIZE + insets.left }
           : { bottom: 0, left: 0, right: 0, height: TOTAL_SIZE + insets.bottom }
       ]}
     >
@@ -189,7 +183,7 @@ export const CustomTabBar = ({ state, descriptors, navigation }: Props) => {
         style={[
           isLandscape ? styles.colContainer : styles.rowContainer,
           isLandscape 
-            ? { paddingLeft: insets.left, width: BAR_SIZE + insets.left }
+            ? { paddingLeft: insets.left, paddingTop: insets.top, width: RAIL_THICKNESS + insets.left }
             : { paddingBottom: insets.bottom, height: BAR_SIZE + insets.bottom }
         ]}
       >
@@ -219,14 +213,16 @@ export const CustomTabBar = ({ state, descriptors, navigation }: Props) => {
               >
                 <TabIcon name={route.name} color={activeColor} size={isFocused ? 26 : 22} />
               </Animated.View>
-              <Animated.Text
-                style={[
-                  styles.label,
-                  { color: activeColor, transform: [{ scale: labelScale[index] }], fontWeight: isFocused ? '700' : '400' },
-                ]}
-              >
-                {label}
-              </Animated.Text>
+              {!isLandscape && (
+                <Animated.Text
+                  style={[
+                    styles.label,
+                    { color: activeColor, transform: [{ scale: labelScale[index] }], fontWeight: isFocused ? '700' : '400' },
+                  ]}
+                >
+                  {label}
+                </Animated.Text>
+              )}
             </Pressable>
           );
         })}

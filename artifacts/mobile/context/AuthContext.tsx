@@ -28,7 +28,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (stored) setDriver(JSON.parse(stored));
-      } catch {}
+      } catch (error) {
+        console.error('[AuthContext] Failed to restore driver from storage:', error);
+      }
       setIsLoading(false);
     })();
   }, []);

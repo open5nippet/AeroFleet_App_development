@@ -3,7 +3,7 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import Head from "expo-router/head";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Alert,
   Platform,
@@ -123,7 +123,9 @@ export default function ProfileScreen() {
       try {
         const stored = await AsyncStorage.getItem("aerofleet_profile_pic");
         if (stored) setProfileImage(stored);
-      } catch {}
+      } catch (error) {
+        console.error('[Profile] Failed to restore profile image:', error);
+      }
     })();
   }, []);
 
@@ -150,7 +152,7 @@ export default function ProfileScreen() {
             if (!result.canceled) {
               const uri = result.assets[0].uri;
               setProfileImage(uri);
-              try { await AsyncStorage.setItem("aerofleet_profile_pic", uri); } catch {}
+              try { await AsyncStorage.setItem("aerofleet_profile_pic", uri); } catch (error) { console.error('[Profile] Failed to save profile image (camera):', error); }
             }
           }
         },
@@ -166,7 +168,7 @@ export default function ProfileScreen() {
             if (!result.canceled) {
               const uri = result.assets[0].uri;
               setProfileImage(uri);
-              try { await AsyncStorage.setItem("aerofleet_profile_pic", uri); } catch {}
+              try { await AsyncStorage.setItem("aerofleet_profile_pic", uri); } catch (error) { console.error('[Profile] Failed to save profile image (gallery):', error); }
             }
           }
         },
@@ -235,8 +237,21 @@ export default function ProfileScreen() {
     Alert.alert("Privacy Overview", "AeroFleet uses end-to-end encryption. Your telemetry data is only visible to your authorized fleet administrator.", [{text: "I Understand"}]);
   };
 
-  const totalSOS = events.filter((e) => e.type === "sos").length;
-  const safeScore = Math.max(0, 100 - events.filter((e) => e.type !== "manual").length * 5);
+  // Optimize event-based calculations with memoization
+  const profileStats = useMemo(() => {
+    let sosCount = 0;
+    let nonManualCount = 0;
+    for (const e of events) {
+      if (e.type === "sos") sosCount++;
+      if (e.type !== "manual") nonManualCount++;
+    }
+    return {
+      totalSOS: sosCount,
+      safeScore: Math.max(0, 100 - nonManualCount * 5),
+    };
+  }, [events]);
+
+  const { totalSOS, safeScore } = profileStats;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: C.background }]} edges={["top"]}>
@@ -348,7 +363,7 @@ export default function ProfileScreen() {
               <View style={sessionStyles.stat}>
                 <Text style={[sessionStyles.val, { color: C.danger, fontFamily: "Inter_700Bold" }]}>{events.length}</Text>
                 <Text style={[sessionStyles.label, { color: C.textMuted, fontFamily: "Inter_400Regular" }]}>Events</Text>
-              </View>
+              </View>totalSOS
             </View>
           </View>
         )}

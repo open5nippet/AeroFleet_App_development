@@ -4,7 +4,8 @@ import * as Location from "expo-location";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import Head from "expo-router/head";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
+import { StatusBar } from "expo-status-bar";
 import {
   ActivityIndicator,
   Animated,
@@ -124,6 +125,13 @@ export default function MapScreen() {
     }
   }, [isRecording]);
 
+  // Cleanup debounce timeout on unmount to prevent memory leak
+  useEffect(() => {
+    return () => {
+      if (searchDebounce.current) clearTimeout(searchDebounce.current);
+    };
+  }, []);
+
   const search = useCallback((text: string) => {
     if (searchDebounce.current) clearTimeout(searchDebounce.current);
     if (!text.trim() || text.length < 2) { setSuggestions([]); return; }
@@ -163,7 +171,9 @@ export default function MapScreen() {
       setOriginCoords(coords);
       setOriginText("My Location");
       setSuggestions([]);
-    } catch {}
+    } catch (error) {
+      console.error('[Map] Failed to get current location:', error);
+    }
   };
 
   const handleGetRoute = async () => {
@@ -431,6 +441,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar hidden={isLandscape} style={C.isDark ? "light" : "dark"} />
       <RNMapView
         mapRef={mapRef}
         originCoords={originCoords}

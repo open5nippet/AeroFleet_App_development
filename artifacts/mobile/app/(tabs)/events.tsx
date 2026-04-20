@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Head from "expo-router/head";
 import { useFocusEffect } from "expo-router";
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo, memo } from "react";
 import {
   Alert,
   FlatList,
@@ -84,6 +84,8 @@ function EventRow({ item, C }: { item: SafetyEvent; C: ColorScheme }) {
   );
 }
 
+const MemoizedEventRow = memo(EventRow);
+
 const rowStyles = StyleSheet.create({
   row: {
     flexDirection: "row", alignItems: "center", gap: 12,
@@ -140,9 +142,25 @@ export default function EventsScreen() {
 
   const filtered = filter === "all" ? events : events.filter((e) => e.type === filter);
 
-  const sosCount = events.filter((e) => e.type === "sos").length;
-  const brakeCount = events.filter((e) => e.type === "harsh_brake").length;
-  const accelCount = events.filter((e) => e.type === "acceleration").length;
+  // Optimize event counting with single pass instead of N+1 filtering
+  const eventCounts = useMemo(() => {
+    const counts: Record<EventType | 'all', number> = {
+      sos: 0,
+      harsh_brake: 0,
+      acceleration: 0,
+      crash: 0,
+      manual: 0,
+      all: events.length,
+    };
+    for (const e of events) {
+      if (counts[e.type] !== undefined) counts[e.type]++;
+    }
+    return counts;
+  }, [events]);
+
+  const sosCount = eventCounts.sos;
+  const brakeCount = eventCounts.harsh_brake;
+  const accelCount = eventCounts.acceleration;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: C.background }]} edges={["top"]}>
@@ -272,7 +290,11 @@ export default function EventsScreen() {
             </Text>
           </View>
         }
-        renderItem={({ item }) => <EventRow item={item} C={C} />}
+        renderItem={({ item }) => <MemoizedEventRow item={item} C={C} />}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={10}
+        removeClippedSubviews={true}
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         ListFooterComponent={null}
         showsVerticalScrollIndicator={false}

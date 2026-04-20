@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Head from "expo-router/head";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo, memo, useCallback } from "react";
 import {
   Animated,
   Platform,
@@ -30,7 +30,7 @@ function formatDuration(seconds: number) {
 }
 
 // ─── Animated Circular Speed Gauge ──────────────────────────────────────────
-function SpeedGauge({ speed, C }: { speed: number; C: ColorScheme }) {
+const SpeedGauge = memo(function SpeedGauge({ speed, C }: { speed: number; C: ColorScheme }) {
   const animSpeed = useRef(new Animated.Value(0)).current;
   const MAX_SPEED = 200;
 
@@ -73,7 +73,7 @@ function SpeedGauge({ speed, C }: { speed: number; C: ColorScheme }) {
       </Text>
     </View>
   );
-}
+});
 
 const gaugeStyles = StyleSheet.create({
   container: { alignItems: "center", gap: 4 },
@@ -106,7 +106,7 @@ const gaugeStyles = StyleSheet.create({
 });
 
 // ─── Sensor Card ─────────────────────────────────────────────────────────────
-function SensorCard({
+const SensorCard = memo(function SensorCard({
   label, icon, value, unit, color, C,
 }: { label: string; icon: string; value: string; unit: string; color: string; C: ColorScheme }) {
   return (
@@ -121,11 +121,11 @@ function SensorCard({
       </Text>
     </View>
   );
-}
+});
 
 const sensorStyles = StyleSheet.create({
   card: {
-    flex: 1, borderRadius: 18, padding: 14, borderWidth: 1, gap: 6,
+    flex: 1, borderRadius: 18, padding: 14, borderWidth: 1, gap: 6, minWidth: 140,
   },
   iconCircle: { width: 30, height: 30, borderRadius: 9, alignItems: "center", justifyContent: "center" },
   label: { fontSize: 11 },
@@ -134,16 +134,21 @@ const sensorStyles = StyleSheet.create({
 });
 
 // ─── Alert Banner ─────────────────────────────────────────────────────────────
-function AlertBanner({ message, onDismiss, C }: { message: string; onDismiss: () => void; C: ColorScheme }) {
+const AlertBanner = memo(function AlertBanner({ message, onDismiss, C }: { message: string; onDismiss: () => void; C: ColorScheme }) {
   const anim = useRef(new Animated.Value(0)).current;
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     Animated.spring(anim, { toValue: 1, tension: 80, friction: 10, useNativeDriver: true }).start();
-    const t = setTimeout(() => {
+    // Clear any existing timeout before setting a new one
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
       Animated.timing(anim, { toValue: 0, duration: 300, useNativeDriver: true }).start(onDismiss);
     }, 3500);
-    return () => clearTimeout(t);
-  }, []);
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [message, anim, onDismiss]);
 
   return (
     <Animated.View
@@ -160,7 +165,7 @@ function AlertBanner({ message, onDismiss, C }: { message: string; onDismiss: ()
       </Pressable>
     </Animated.View>
   );
-}
+});
 
 const bannerStyles = StyleSheet.create({
   banner: {
@@ -237,17 +242,28 @@ export default function DashboardScreen() {
     }
   }, [isRecording]);
 
-  const handleToggle = () => {
+  const handleToggle = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (isRecording) stopRecording();
     else startRecording();
-  };
+  }, [isRecording, startRecording, stopRecording]);
 
-  const accelMag = Math.sqrt(
-    accelerometerData.x ** 2 + accelerometerData.y ** 2 + (accelerometerData.z - 9.81) ** 2
+  const accelMag = useMemo(
+    () => Math.sqrt(
+      accelerometerData.x ** 2 + accelerometerData.y ** 2 + (accelerometerData.z - 9.81) ** 2
+    ),
+    [accelerometerData]
   );
-  const stability = Math.max(0, 1 - (Math.abs(gyroscopeData.x) + Math.abs(gyroscopeData.y)) * 5);
-  const clipNum = Math.floor(recordingDuration / 300) + 1;
+  
+  const stability = useMemo(
+    () => Math.max(0, 1 - (Math.abs(gyroscopeData.x) + Math.abs(gyroscopeData.y)) * 5),
+    [gyroscopeData]
+  );
+  
+  const clipNum = useMemo(
+    () => Math.floor(recordingDuration / 300) + 1,
+    [recordingDuration]
+  );
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: C.background }]} edges={["top"]}>
@@ -463,7 +479,10 @@ export default function DashboardScreen() {
           </View>
           <View style={[styles.statBox, { backgroundColor: C.backgroundCard, borderColor: C.border }]}>
             <Text style={[styles.statNum, { color: C.success, fontFamily: "Inter_700Bold" }]}>
-              {events.filter((e) => e.type === "sos").length === 0 ? "Safe" : `${events.filter((e) => e.type === "sos").length} SOS`}
+              {(() => {
+                const sosCount = events.filter((e) => e.type === "sos").length;
+                return sosCount === 0 ? "Safe" : `${sosCount} SOS`;
+              })()}
             </Text>
             <Text style={[styles.statLabel, { color: C.textMuted, fontFamily: "Inter_400Regular" }]}>Safety Status</Text>
           </View>
@@ -528,7 +547,7 @@ const styles = StyleSheet.create({
   miniSensorCard: { borderRadius: 12, padding: 12, gap: 4 },
   miniLabel: { fontSize: 10 },
   miniVal: { fontSize: 16 },
-  sensorGrid: { flexDirection: "row", gap: 12, marginBottom: 12 },
+  sensorGrid: { flexDirection: "row", gap: 12, marginBottom: 12, flexWrap: "wrap" },
   gpsCard: { borderRadius: 18, padding: 16, borderWidth: 1, marginBottom: 12, overflow: "hidden" },
   gpsHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 },
   gpsIconCircle: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
@@ -542,10 +561,10 @@ const styles = StyleSheet.create({
   coordValue: { fontSize: 15 },
   coordDivider: { width: 1, height: 36, marginHorizontal: 16 },
   noGps: { fontSize: 13, textAlign: "center", paddingVertical: 8 },
-  statsRow: { flexDirection: "row", gap: 10, marginTop: 4 },
+  statsRow: { flexDirection: "row", gap: 10, marginTop: 4, flexWrap: "wrap", justifyContent: "space-between" },
   statBox: {
     flex: 1, borderRadius: 14, padding: 14, alignItems: "center",
-    borderWidth: 1, gap: 4,
+    borderWidth: 1, gap: 4, minWidth: 120, flexBasis: "30%",
   },
   statNum: { fontSize: 17 },
   statLabel: { fontSize: 10, textAlign: "center" },

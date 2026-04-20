@@ -34,14 +34,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (stored === "dark" || stored === "light" || stored === "system") {
           setThemeState(stored);
         }
-      } catch {}
+      } catch (error) {
+        console.error('[ThemeContext] Failed to restore theme from storage:', error);
+      }
       setLoaded(true);
     })();
   }, []);
 
   const setTheme = useCallback(async (t: ThemePreference) => {
     setThemeState(t);
-    try { await AsyncStorage.setItem(STORAGE_KEY, t); } catch {}
+    try { await AsyncStorage.setItem(STORAGE_KEY, t); } catch (error) { console.error('[ThemeContext] Failed to save theme:', error); }
   }, []);
 
   const resolvedTheme: "dark" | "light" =

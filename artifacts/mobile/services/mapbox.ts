@@ -1,5 +1,3 @@
-const MAPBOX_KEY = process.env.EXPO_PUBLIC_MAPBOX_KEY ?? "";
-
 export type Coordinates = { latitude: number; longitude: number };
 
 export type GeocodeResult = {
@@ -14,53 +12,73 @@ export type RouteResult = {
   coordinates: Coordinates[];
 };
 
-const GEOCODER_COUNTRY = "in";
-const GEOCODER_BBOX = "76.8381,28.4042,77.3485,28.8835";
-const DELHI_CENTER = "77.2090,28.6139";
+// Backend API endpoint for secure Mapbox proxying
+const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000/api";
 
+// Configurable location defaults (can be overridden via environment or config)
+const DEFAULT_COUNTRY = process.env.EXPO_PUBLIC_LOCATION_COUNTRY ?? "in";
+const DEFAULT_BBOX = process.env.EXPO_PUBLIC_LOCATION_BBOX ?? "76.8381,28.4042,77.3485,28.8835";
+const DEFAULT_CENTER = process.env.EXPO_PUBLIC_LOCATION_CENTER ?? "77.2090,28.6139";
+
+/**
+ * Geocode a place by calling the backend proxy endpoint (Mapbox key is never exposed to client)
+ */
 export async function geocodePlace(query: string): Promise<GeocodeResult[]> {
-  if (!query.trim() || !MAPBOX_KEY) return [];
-  const encoded = encodeURIComponent(query);
-  const url = [
-    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encoded}.json`,
-    `?access_token=${MAPBOX_KEY}`,
-    `&limit=5`,
-    `&types=place,address,poi,locality,neighborhood`,
-    `&country=${GEOCODER_COUNTRY}`,
-    `&bbox=${GEOCODER_BBOX}`,
-    `&proximity=${DELHI_CENTER}`,
-    `&language=en`,
-  ].join("");
-  const res = await fetch(url);
-  if (!res.ok) return [];
-  const data = await res.json();
-  return (data.features ?? []).map((f: any) => ({
-    id: f.id,
-    place_name: f.place_name,
-    center: f.center,
-  }));
+  if (!query.trim()) return [];
+  
+  try {
+    const res = await fetch(`${API_BASE}/mapbox/geocode`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: query.trim(),
+        country: DEFAULT_COUNTRY,
+        bbox: DEFAULT_BBOX,
+      }),
+    });
+    
+    if (!res.ok) {
+      console.error('[Geocode] Backend error:', res.status);
+      return [];
+    }
+    
+    const data = await res.json();
+    return data.results ?? [];
+  } catch (error) {
+    console.error('[Geocode] Request failed:', error);
+    return [];
+  }
 }
 
+/**
+ * Get route between two coordinates by calling the backend proxy endpoint
+ */
 export async function getRoute(
   origin: Coordinates,
   destination: Coordinates
 ): Promise<RouteResult | null> {
-  if (!MAPBOX_KEY) return null;
-  const coords = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
-  const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coords}?access_token=${MAPBOX_KEY}&geometries=geojson&overview=full`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  const data = await res.json();
-  if (!data.routes?.length) return null;
-  const route = data.routes[0];
-  return {
-    distance: route.distance,
-    duration: route.duration,
-    coordinates: route.geometry.coordinates.map(([lng, lat]: [number, number]) => ({
-      latitude: lat,
-      longitude: lng,
-    })),
-  };
+  try {
+    const res = await fetch(`${API_BASE}/mapbox/route`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        originLat: origin.latitude,
+        originLng: origin.longitude,
+        destLat: destination.latitude,
+        destLng: destination.longitude,
+      }),
+    });
+    
+    if (!res.ok) {
+      console.error('[Route] Backend error:', res.status);
+      return null;
+    }
+    
+    return await res.json();
+  } catch (error) {
+    console.error('[Route] Request failed:', error);
+    return null;
+  }
 }
 
 export function formatDistance(meters: number): string {

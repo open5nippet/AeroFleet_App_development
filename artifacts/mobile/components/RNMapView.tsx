@@ -5,7 +5,7 @@ import Colors from "@/constants/colors";
 import type { Coordinates, RouteResult } from "@/services/mapbox";
 
 const C = Colors.light;
-const MAPBOX_KEY = process.env.EXPO_PUBLIC_MAPBOX_KEY ?? "";
+const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000/api";
 
 type Props = {
   mapRef?: React.RefObject<any>;
@@ -16,16 +16,24 @@ type Props = {
   hasLocationPermission?: boolean;
 };
 
-function buildStaticUrl(origin: Coordinates | null, dest: Coordinates | null): string | null {
+function buildStaticMapUrl(origin: Coordinates | null, dest: Coordinates | null): string | null {
   if (!origin && !dest) return null;
-  const markers: string[] = [];
-  if (origin) markers.push(`pin-l-a+00D4FF(${origin.longitude},${origin.latitude})`);
-  if (dest) markers.push(`pin-l-b+FF3B30(${dest.longitude},${dest.latitude})`);
-  return `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/${markers.join(",")}/auto/640x360@2x?access_token=${MAPBOX_KEY}&padding=60`;
+  
+  const params = new URLSearchParams();
+  if (origin) {
+    params.append("originLat", origin.latitude.toString());
+    params.append("originLng", origin.longitude.toString());
+  }
+  if (dest) {
+    params.append("destLat", dest.latitude.toString());
+    params.append("destLng", dest.longitude.toString());
+  }
+  
+  return `${API_BASE}/mapbox/staticmap?${params.toString()}`;
 }
 
 export default function RNMapView({ originCoords, destCoords, route }: Props) {
-  const mapUrl = buildStaticUrl(originCoords, destCoords);
+  const mapUrl = buildStaticMapUrl(originCoords, destCoords);
 
   if (!mapUrl) {
     return (

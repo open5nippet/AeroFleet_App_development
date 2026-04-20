@@ -59,14 +59,18 @@ export function RecordingProvider({ children }: { children: React.ReactNode }) {
       try {
         const stored = await AsyncStorage.getItem(EVENTS_KEY);
         if (stored) setEvents(JSON.parse(stored));
-      } catch {}
+      } catch (error) {
+        console.error('[RecordingContext] Failed to restore events from storage:', error);
+      }
     })();
   }, []);
 
   const saveEvents = useCallback(async (evts: SafetyEvent[]) => {
     try {
       await AsyncStorage.setItem(EVENTS_KEY, JSON.stringify(evts.slice(-50)));
-    } catch {}
+    } catch (error) {
+      console.error('[RecordingContext] Failed to save events:', error);
+    }
   }, []);
 
   const startRecording = useCallback(async () => {

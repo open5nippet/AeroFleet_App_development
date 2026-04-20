@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import Head from "expo-router/head";
 import React, { useEffect, useRef, useState } from "react";
+import { StatusBar } from "expo-status-bar";
 import {
   Animated,
   Platform,
@@ -63,7 +64,9 @@ export default function CameraScreen() {
         if (stored && QUALITY_OPTIONS.includes(stored as VideoQuality)) {
           setVideoQuality(stored as VideoQuality);
         }
-      } catch {}
+      } catch (error) {
+        console.error('[Camera] Failed to restore video quality preference:', error);
+      }
     })();
   }, []);
 
@@ -193,6 +196,7 @@ export default function CameraScreen() {
         <meta property="og:title" content="Camera | AeroFleet" />
         <meta property="og:description" content="AI Dashcam & Fleet Safety Platform — live camera view." />
       </Head>
+      <StatusBar hidden={isLandscape} style={C.isDark ? "light" : "dark"} />
       {Platform.OS !== "web" ? (
         <CameraView style={StyleSheet.absoluteFill} facing={facing} />
       ) : (
@@ -286,7 +290,7 @@ export default function CameraScreen() {
         </View>
 
         {/* Symmetrical Control Bar */}
-        <View style={styles.controlRow}>
+        <View style={[styles.controlRow, isLandscape ? { position: "absolute", right: TAB_BAR_OFFSET + 12, bottom: bottomPad + 30, flexDirection: "column", alignItems: "center", gap: 12 } : null]}>
           {/* Left: Flip */}
           <Pressable onPress={handleFlipCamera} style={({ pressed }) => [styles.sideActionBtn, { opacity: pressed ? 0.7 : 1 }]}>
             <Ionicons name="camera-reverse" size={24} color="#fff" />
