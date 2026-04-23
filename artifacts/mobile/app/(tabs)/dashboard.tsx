@@ -265,6 +265,11 @@ export default function DashboardScreen() {
     [recordingDuration]
   );
 
+  const safetyStatusText = useMemo(() => {
+    const sosCount = events.filter((e) => e.type === "sos").length;
+    return sosCount === 0 ? "Safe" : `${sosCount} SOS`;
+  }, [events]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: C.background }]} edges={["top"]}>
       <Head>
@@ -479,10 +484,7 @@ export default function DashboardScreen() {
           </View>
           <View style={[styles.statBox, { backgroundColor: C.backgroundCard, borderColor: C.border }]}>
             <Text style={[styles.statNum, { color: C.success, fontFamily: "Inter_700Bold" }]}>
-              {(() => {
-                const sosCount = events.filter((e) => e.type === "sos").length;
-                return sosCount === 0 ? "Safe" : `${sosCount} SOS`;
-              })()}
+              {safetyStatusText}
             </Text>
             <Text style={[styles.statLabel, { color: C.textMuted, fontFamily: "Inter_400Regular" }]}>Safety Status</Text>
           </View>
@@ -570,8 +572,8 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 10, textAlign: "center" },
   
   // Responsive dual-column
-  landscapeLayout: { flexDirection: "row", gap: 24 },
+  landscapeLayout: { flexDirection: "column", gap: 12 },
   portraitLayout: { flexDirection: "column" },
-  leftColumn: { flex: 1 },
-  rightColumn: { flex: 1.2, gap: 4 },
+  leftColumn: { width: "100%" },
+  rightColumn: { width: "100%", gap: 4 },
 });

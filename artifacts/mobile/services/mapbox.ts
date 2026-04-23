@@ -13,21 +13,39 @@ export type RouteResult = {
 };
 
 // Backend API endpoint for secure Mapbox proxying
-const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000/api";
+const API_BASE = process.env.EXPO_PUBLIC_API_URL;
 
 // Configurable location defaults (can be overridden via environment or config)
 const DEFAULT_COUNTRY = process.env.EXPO_PUBLIC_LOCATION_COUNTRY ?? "in";
 const DEFAULT_BBOX = process.env.EXPO_PUBLIC_LOCATION_BBOX ?? "76.8381,28.4042,77.3485,28.8835";
 const DEFAULT_CENTER = process.env.EXPO_PUBLIC_LOCATION_CENTER ?? "77.2090,28.6139";
 
+function normalizeBaseUrl(base: string): string {
+  return base.trim().replace(/\/+$/, "");
+}
+
+function requireApiBase(): string {
+  if (!API_BASE?.trim()) {
+    throw new Error("EXPO_PUBLIC_API_URL is missing. Set it to your API server origin (e.g. http://192.168.1.10:3000).");
+  }
+  return normalizeBaseUrl(API_BASE);
+}
+
+function apiUrl(pathname: string): string {
+  const base = requireApiBase();
+  const path = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  return `${base}${path}`;
+}
+
 /**
  * Geocode a place by calling the backend proxy endpoint (Mapbox key is never exposed to client)
  */
 export async function geocodePlace(query: string): Promise<GeocodeResult[]> {
   if (!query.trim()) return [];
-  
+
   try {
-    const res = await fetch(`${API_BASE}/mapbox/geocode`, {
+    const url = apiUrl("/mapbox/geocode");
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -38,14 +56,14 @@ export async function geocodePlace(query: string): Promise<GeocodeResult[]> {
     });
     
     if (!res.ok) {
-      console.error('[Geocode] Backend error:', res.status);
+      console.error(`[Geocode] Backend error (${res.status}) at: ${url}`);
       return [];
     }
     
     const data = await res.json();
     return data.results ?? [];
   } catch (error) {
-    console.error('[Geocode] Request failed:', error);
+    console.error(`[Geocode] Request failed:`, error);
     return [];
   }
 }
@@ -58,7 +76,8 @@ export async function getRoute(
   destination: Coordinates
 ): Promise<RouteResult | null> {
   try {
-    const res = await fetch(`${API_BASE}/mapbox/route`, {
+    const url = apiUrl("/mapbox/route");
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -70,13 +89,13 @@ export async function getRoute(
     });
     
     if (!res.ok) {
-      console.error('[Route] Backend error:', res.status);
+      console.error(`[Route] Backend error (${res.status}) at: ${url}`);
       return null;
     }
     
     return await res.json();
   } catch (error) {
-    console.error('[Route] Request failed:', error);
+    console.error(`[Route] Request failed:`, error);
     return null;
   }
 }

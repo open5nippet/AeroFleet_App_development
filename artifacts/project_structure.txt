@@ -1,0 +1,111 @@
+﻿+ artifacts/
+  + api-server/
+    + src/
+      + lib/
+        - .gitkeep
+      + middlewares/
+        - .gitkeep
+      + routes/
+        - health.ts
+        - index.ts
+        - mapbox.ts
+      - app.ts
+      - index.ts
+    - .env
+    - build.ts
+    - package.json
+    - tsconfig.json
+  + mobile/
+    + app/
+      + (tabs)/
+        - camera.tsx
+        - dashboard.tsx
+        - events.tsx
+        - map.tsx
+        - profile.tsx
+        - _layout.tsx
+      - +not-found.tsx
+      - help.tsx
+      - index.tsx
+      - intro.tsx
+      - login.tsx
+      - _layout.tsx
+    + assets/
+      + images/
+        - aerofleet_logo.png
+        - icon.png
+        - splash-icon.png
+      - aerofleet_intro.mp4
+    + components/
+      - CustomTabBar.tsx
+      - ErrorBoundary.tsx
+      - ErrorFallback.tsx
+      - KeyboardAwareScrollViewCompat.tsx
+      - RNMapView.native.tsx
+      - RNMapView.tsx
+    + constants/
+      - colors.ts
+    + context/
+      - AuthContext.tsx
+      - RecordingContext.tsx
+      - ThemeContext.tsx
+    + scripts/
+      - build.js
+    + server/
+      + templates/
+        - landing-page.html
+      - serve.js
+    + services/
+      - mapbox.ts
+    - .env
+    - .gitignore
+    - app.json
+    - babel.config.js
+    - expo-env.d.ts
+    - metro.config.js
+    - package.json
+    - tsconfig.json
+  - project_structure.txt
++ lib/
+  + api-client-react/
+    + src/
+      + generated/
+        - api.schemas.ts
+        - api.ts
+      - custom-fetch.ts
+      - index.ts
+    - package.json
+    - tsconfig.json
+    - tsconfig.tsbuildinfo
+  + api-spec/
+    - openapi.yaml
+    - orval.config.ts
+    - package.json
+  + api-zod/
+    + src/
+      + generated/
+        + types/
+          - healthStatus.ts
+          - index.ts
+        - api.ts
+      - index.ts
+    - package.json
+    - tsconfig.json
+    - tsconfig.tsbuildinfo
+  + db/
+    + src/
+      + schema/
+        - index.ts
+      - index.ts
+    - drizzle.config.ts
+    - package.json
+    - tsconfig.json
+    - tsconfig.tsbuildinfo
+- .gitignore
+- .npmrc
+- package.json
+- pnpm-lock.yaml
+- pnpm-workspace.yaml
+- README.md
+- tsconfig.base.json
+- tsconfig.json

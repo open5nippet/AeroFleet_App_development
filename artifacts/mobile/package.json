@@ -57,9 +57,9 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "@rnmapbox/maps": "^10.3.0",
     "expo-camera": "~17.0.10",
     "expo-video": "~2.0.6",
-    "lightningcss": "^1.32.0",
-    "react-native-maps": "1.18.0"
+    "lightningcss": "^1.32.0"
   }
 }

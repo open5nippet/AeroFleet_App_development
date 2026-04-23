@@ -5,7 +5,7 @@ import Colors from "@/constants/colors";
 import type { Coordinates, RouteResult } from "@/services/mapbox";
 
 const C = Colors.light;
-const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000/api";
+const API_BASE = process.env.EXPO_PUBLIC_API_URL;
 
 type Props = {
   mapRef?: React.RefObject<any>;
@@ -19,6 +19,9 @@ type Props = {
 function buildStaticMapUrl(origin: Coordinates | null, dest: Coordinates | null): string | null {
   if (!origin && !dest) return null;
   
+  if (!API_BASE?.trim()) return null;
+  const base = API_BASE.trim().replace(/\/+$/, "");
+
   const params = new URLSearchParams();
   if (origin) {
     params.append("originLat", origin.latitude.toString());
@@ -29,7 +32,7 @@ function buildStaticMapUrl(origin: Coordinates | null, dest: Coordinates | null)
     params.append("destLng", dest.longitude.toString());
   }
   
-  return `${API_BASE}/mapbox/staticmap?${params.toString()}`;
+  return `${base}/mapbox/staticmap?${params.toString()}`;
 }
 
 export default function RNMapView({ originCoords, destCoords, route }: Props) {

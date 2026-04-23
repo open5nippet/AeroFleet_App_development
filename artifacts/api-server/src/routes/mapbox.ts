@@ -1,9 +1,35 @@
 import { Router, type Request, type Response } from "express";
+import { z } from "zod";
 
 const router = Router();
 
-const MAPBOX_KEY = process.env.MAPBOX_KEY;
+const MAPBOX_KEY = process.env.MAPBOX_SECRET_KEY;
 const MAPBOX_BASE = "https://api.mapbox.com";
+
+// Validation schemas for Mapbox API responses
+const GeocodingFeatureSchema = z.object({
+  id: z.string(),
+  place_name: z.string(),
+  center: z.tuple([z.number(), z.number()]),
+});
+
+const GeocodingResponseSchema = z.object({
+  features: z.array(GeocodingFeatureSchema).optional(),
+});
+
+const RouteGeometrySchema = z.object({
+  coordinates: z.array(z.tuple([z.number(), z.number()])),
+});
+
+const RouteSchema = z.object({
+  distance: z.number(),
+  duration: z.number(),
+  geometry: RouteGeometrySchema,
+});
+
+const DirectionsResponseSchema = z.object({
+  routes: z.array(RouteSchema).optional(),
+});
 
 /**
  * Geocoding proxy endpoint
@@ -30,22 +56,24 @@ router.post("/geocode", async (req: Request, res: Response): Promise<void> => {
 
   try {
     const encoded = encodeURIComponent(query);
-    const url = [
-      `${MAPBOX_BASE}/geocoding/v5/mapbox.places/${encoded}.json`,
-      `?access_token=${MAPBOX_KEY}`,
-      `&limit=5`,
-      `&types=place,address,poi,locality,neighborhood`,
-      `&country=${country}`,
-      `&bbox=${bbox}`,
-    ].join("");
+    const url = new URL(
+      `/geocoding/v5/mapbox.places/${encoded}.json`,
+      MAPBOX_BASE
+    );
+    url.searchParams.set("access_token", MAPBOX_KEY);
+    url.searchParams.set("limit", "5");
+    url.searchParams.set("types", "place,address,poi,locality,neighborhood");
+    url.searchParams.set("country", country);
+    url.searchParams.set("bbox", bbox);
 
-    const response = await fetch(url);
+    const response = await fetch(url.toString());
     if (!response.ok) {
       throw new Error(`Mapbox API error: ${response.statusText}`);
     }
 
-    const data = (await response.json()) as { features?: Array<{ id: string; place_name: string; center: [number, number] }> };
-    const results = (data.features || []).map((f) => ({
+    const data = await response.json();
+    const validatedData = GeocodingResponseSchema.parse(data);
+    const results = (validatedData.features || []).map((f: any) => ({
       id: f.id,
       place_name: f.place_name,
       center: f.center, // [lng, lat]
@@ -82,29 +110,25 @@ router.post("/route", async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
-    const url = [
-      `${MAPBOX_BASE}/directions/v5/mapbox/driving-traffic`,
-      `/${originLng},${originLat};${destLng},${destLat}`,
-      `?access_token=${MAPBOX_KEY}`,
-      `&geometries=geojson`,
-      `&overview=full`,
-      `&steps=false`,
-      `&bannerInstructions=false`,
-      `&voiceInstructions=false`,
-    ].join("");
+    const url = new URL(
+      `/directions/v5/mapbox/driving-traffic/${originLng},${originLat};${destLng},${destLat}`,
+      MAPBOX_BASE
+    );
+    url.searchParams.set("access_token", MAPBOX_KEY);
+    url.searchParams.set("geometries", "geojson");
+    url.searchParams.set("overview", "full");
+    url.searchParams.set("steps", "false");
+    url.searchParams.set("bannerInstructions", "false");
+    url.searchParams.set("voiceInstructions", "false");
 
-    const response = await fetch(url);
+    const response = await fetch(url.toString());
     if (!response.ok) {
       throw new Error(`Mapbox API error: ${response.statusText}`);
     }
 
-    const data = (await response.json()) as unknown;
-    if (!data || typeof data !== "object" || !("routes" in data)) {
-      throw new Error("Invalid route response");
-    }
-
-    const routeData = data as { routes?: Array<{ distance: number; duration: number; geometry: { coordinates: Array<[number, number]> } }> };
-    const route = routeData.routes?.[0];
+    const data = await response.json();
+    const validatedData = DirectionsResponseSchema.parse(data);
+    const route = validatedData.routes?.[0];
 
     if (!route) {
       res.status(404).json({ error: "No route found" });
@@ -160,11 +184,14 @@ router.get("/staticmap", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const staticUrl = `${MAPBOX_BASE}/styles/v1/mapbox/dark-v11/static/${markers.join(
-      ","
-    )}/auto/640x360@2x?access_token=${MAPBOX_KEY}&padding=60`;
+    const staticUrl = new URL(
+      `/styles/v1/mapbox/dark-v11/static/${markers.join(",")}/auto/640x360@2x`,
+      MAPBOX_BASE
+    );
+    staticUrl.searchParams.set("access_token", MAPBOX_KEY);
+    staticUrl.searchParams.set("padding", "60");
 
-    res.redirect(staticUrl);
+    res.redirect(staticUrl.toString());
   } catch (error) {
     console.error("[Mapbox StaticMap]", error);
     res.status(500).send("Static map generation failed");

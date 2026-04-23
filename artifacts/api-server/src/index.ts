@@ -1,6 +1,8 @@
+import "dotenv/config";
 import app from "./app";
 
 const rawPort = process.env["PORT"];
+const host = "0.0.0.0";
 
 if (!rawPort) {
   throw new Error(
@@ -15,14 +17,14 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 // Validate additional required environment variables
-const requiredEnvVars = ["DATABASE_URL", "MAPBOX_KEY"];
+const requiredEnvVars = ["DATABASE_URL", "MAPBOX_SECRET_KEY"];
 const missingVars = requiredEnvVars.filter((v) => !process.env[v]);
 if (missingVars.length > 0) {
-  console.warn(
-    `Warning: The following environment variables are recommended but not set: ${missingVars.join(", ")}`
+  throw new Error(
+    `Critical environment variables are missing: ${missingVars.join(", ")}`
   );
 }
 
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
+app.listen(port, host, () => {
+  console.log(`Server listening on http://${host}:${port}`);
 });

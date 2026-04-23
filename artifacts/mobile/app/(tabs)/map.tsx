@@ -4,7 +4,7 @@ import * as Location from "expo-location";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import Head from "expo-router/head";
-import React, { useCallback, useRef, useState, useEffect } from "react";
+import React, { useCallback, useRef, useState, useEffect, memo } from "react";
 import { StatusBar } from "expo-status-bar";
 import {
   ActivityIndicator,
@@ -18,6 +18,7 @@ import {
   Text,
   TextInput,
   useWindowDimensions,
+  useColorScheme,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -40,7 +41,7 @@ import {
 const IS_WEB = Platform.OS === "web";
 type SearchField = "origin" | "destination" | null;
 
-function SuggestionItem({ item, onPress, C }: { item: GeocodeResult; onPress: () => void; C: ColorScheme }) {
+const SuggestionItem = memo(function SuggestionItem({ item, onPress, C }: { item: GeocodeResult; onPress: () => void; C: ColorScheme }) {
   const [name, ...rest] = item.place_name.split(",");
   return (
     <Pressable
@@ -71,6 +72,8 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === "dark";
   const topPad = IS_WEB ? 67 : insets.top;
   const bottomPad = IS_WEB ? 34 : insets.bottom;
   const isSmall = width < 380;
@@ -143,7 +146,7 @@ export default function MapScreen() {
     }, 350);
   }, []);
 
-  const selectSuggestion = (item: GeocodeResult) => {
+  const selectSuggestion = useCallback((item: GeocodeResult) => {
     Haptics.selectionAsync();
     const coords: Coordinates = { latitude: item.center[1], longitude: item.center[0] };
     if (activeField === "origin") {
@@ -156,9 +159,9 @@ export default function MapScreen() {
     setSuggestions([]);
     setActiveField(null);
     Keyboard.dismiss();
-  };
+  }, [activeField]);
 
-  const useMyLocation = async () => {
+  const useMyLocation = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!locPermission?.granted) {
       const result = await requestLocPermission();
@@ -174,9 +177,9 @@ export default function MapScreen() {
     } catch (error) {
       console.error('[Map] Failed to get current location:', error);
     }
-  };
+  }, [locPermission, requestLocPermission]);
 
-  const handleGetRoute = async () => {
+  const handleGetRoute = useCallback(async () => {
     if (!originCoords || !destCoords) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setLoadingRoute(true);
@@ -202,13 +205,13 @@ export default function MapScreen() {
     } finally {
       setLoadingRoute(false);
     }
-  };
+  }, [originCoords, destCoords, isSmall, cardAnim]);
 
-  const clearAll = () => {
+  const clearAll = useCallback(() => {
     setRoute(null); setOriginCoords(null); setDestCoords(null);
     setOriginText(""); setDestText(""); setRouteError("");
     cardAnim.setValue(0);
-  };
+  }, [cardAnim]);
 
   const canRoute = !!originCoords && !!destCoords && !loadingRoute;
 
@@ -462,9 +465,11 @@ export default function MapScreen() {
         pointerEvents={isRecording ? "none" : "box-none"}
       >
         <LinearGradient
-          colors={C.isDark
-            ? ["rgba(6,8,16,0.95)", "rgba(6,8,16,0.85)", "rgba(6,8,16,0.2)", "transparent"]
-            : ["rgba(240,244,251,0.95)", "rgba(240,244,251,0.85)", "rgba(240,244,251,0.2)", "transparent"]}
+          colors={isDarkMode
+            ? ["transparent", "transparent"]
+            : C.isDark
+              ? ["rgba(6,8,16,0.95)", "rgba(6,8,16,0.85)", "rgba(6,8,16,0.2)", "transparent"]
+              : ["rgba(240,244,251,0.95)", "rgba(240,244,251,0.85)", "rgba(240,244,251,0.2)", "transparent"]}
           style={[
             styles.topGradient, 
             { 

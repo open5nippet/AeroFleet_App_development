@@ -9,6 +9,33 @@ export type BodyType<T> = T;
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
+function getExpoPublicApiUrl(): string | undefined {
+  const raw = process.env.EXPO_PUBLIC_API_URL;
+  if (!raw) return undefined;
+  const trimmed = raw.trim();
+  return trimmed === "" ? undefined : trimmed.replace(/\/+$/, "");
+}
+
+function isAbsoluteHttpUrl(url: string): boolean {
+  return /^https?:\/\//i.test(url);
+}
+
+function resolveAgainstBase(url: string, base: string): string {
+  // Ensures `/path` resolves correctly against `http(s)://host[:port]`.
+  // Also supports non-leading-slash relative segments.
+  return new URL(url, base.endsWith("/") ? base : `${base}/`).toString();
+}
+
+function stripDuplicateApiPrefix(urlPath: string, baseUrl: string): string {
+  const normalizedBase = baseUrl.replace(/\/+$/, "");
+  const baseEndsWithApi = normalizedBase.endsWith("/api");
+
+  if (!baseEndsWithApi) return urlPath;
+  if (urlPath === "/api") return "/";
+  if (urlPath.startsWith("/api/")) return urlPath.slice("/api".length);
+  return urlPath;
+}
+
 function isRequest(input: RequestInfo | URL): input is Request {
   return typeof Request !== "undefined" && input instanceof Request;
 }
@@ -297,9 +324,26 @@ export async function customFetch<T = unknown>(
     headers.set("accept", DEFAULT_JSON_ACCEPT);
   }
 
-  const requestInfo = { method, url: resolveUrl(input) };
+  const resolved = resolveUrl(input);
+  const baseUrl = getExpoPublicApiUrl();
+  const finalUrl =
+    typeof resolved === "string" && !isAbsoluteHttpUrl(resolved)
+      ? (() => {
+          if (!baseUrl) {
+            throw new Error(
+              "EXPO_PUBLIC_API_URL is missing. Set it to your API base (e.g. http://192.168.1.10:3000/api).",
+            );
+          }
+          const effectivePath = resolved.startsWith("/")
+            ? stripDuplicateApiPrefix(resolved, baseUrl)
+            : resolved;
+          return resolveAgainstBase(effectivePath, baseUrl);
+        })()
+      : resolved;
 
-  const response = await fetch(input, { ...init, method, headers });
+  const requestInfo = { method, url: finalUrl };
+
+  const response = await fetch(finalUrl, { ...init, method, headers });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

@@ -145,7 +145,7 @@ export default function LoginScreen() {
             <Ionicons name="person-outline" size={18} color={nameFocused ? C.tint : C.textMuted} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { color: C.text, fontFamily: "Inter_400Regular" }]}
-              placeholder="Driver Name"
+              placeholder="Driver name"
               placeholderTextColor={C.textMuted}
               value={name}
               onChangeText={(t) => { setName(t); setError(""); }}

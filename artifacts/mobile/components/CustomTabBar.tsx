@@ -20,10 +20,10 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import Svg, { Path, G } from 'react-native-svg';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const BAR_SIZE     = 76;   // Thickness of the bar (height in P, width in L)
+const BAR_SIZE     = 76;   // Thickness of the bar (height in P)
 const OVERREACH    = 38;   // Space for the crater curves
 const TOTAL_SIZE   = BAR_SIZE + OVERREACH;
-const RAIL_THICKNESS = 56; // Narrow rail width for landscape
+const LAND_WIDTH   = 100;  // Solid fixed width for landscape mode
 
 const NOTCH_HALF_W = 68;
 const NOTCH_DEPTH  = 30;
@@ -91,13 +91,9 @@ function buildHorizontalPath(cx: number, screenW: number, extraB: number): strin
 }
 
 function buildVerticalPath(cy: number, screenH: number): string {
-  const left = OVERREACH; 
-  const right = TOTAL_SIZE;
-
-  // In landscape (narrow rail), use a simple straight edge instead of curved notch
-  // This gives a cleaner, modern look for the narrow vertical rail
+  // Simple solid column path for landscape requested by user
   return [
-    `M ${right} 0 L ${left} 0 L ${left} ${screenH} L ${right} ${screenH} Z`,
+    `M 0 0 L ${LAND_WIDTH} 0 L ${LAND_WIDTH} ${screenH} L 0 ${screenH} Z`,
   ].join(' ');
 }
 
@@ -108,7 +104,6 @@ export const CustomTabBar = ({ state, descriptors, navigation }: Props) => {
   const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useWindowDimensions();
   const isLandscape = screenW > screenH;
-  
   const n = state.routes.length;
   const itemSize = isLandscape ? screenH / n : screenW / n;
 
@@ -133,7 +128,7 @@ export const CustomTabBar = ({ state, descriptors, navigation }: Props) => {
     const id = notchPos.addListener(({ value }) => updatePath(value));
     updatePath(state.index * itemSize + itemSize / 2);
     return () => notchPos.removeListener(id);
-  }, [isLandscape, screenW, screenH, insets.bottom, itemSize]);
+  }, [screenW, screenH, insets.bottom, itemSize, isLandscape]);
 
   const prevIndex = useRef(state.index);
 
@@ -163,18 +158,20 @@ export const CustomTabBar = ({ state, descriptors, navigation }: Props) => {
       style={[
         styles.wrapper,
         isLandscape 
-          ? { top: insets.top, bottom: 0, left: 0, width: TOTAL_SIZE + insets.left }
+          ? { left: 0, top: 0, bottom: 0, width: LAND_WIDTH + insets.left }
           : { bottom: 0, left: 0, right: 0, height: TOTAL_SIZE + insets.bottom }
       ]}
     >
       <Svg
-        width={isLandscape ? TOTAL_SIZE + insets.left : screenW}
+        width={isLandscape ? LAND_WIDTH + insets.left : screenW}
         height={isLandscape ? screenH : TOTAL_SIZE + insets.bottom}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       >
-        <G transform={isLandscape ? `translate(${insets.left}, 0) scale(-1, 1) translate(-${TOTAL_SIZE}, 0)` : ''}>
-           <Path d={svgPath} fill="rgba(0,0,0,0.3)" transform={isLandscape ? 'translate(-3, 0)' : 'translate(0, 3)'} />
+        <G transform={isLandscape ? "" : ""}>
+           {!isLandscape && (
+             <Path d={svgPath} fill="rgba(0,0,0,0.3)" transform="translate(0, 3)" />
+           )}
            <Path d={svgPath} fill={BAR_COLOR} />
         </G>
       </Svg>
@@ -183,7 +180,7 @@ export const CustomTabBar = ({ state, descriptors, navigation }: Props) => {
         style={[
           isLandscape ? styles.colContainer : styles.rowContainer,
           isLandscape 
-            ? { paddingLeft: insets.left, paddingTop: insets.top, width: RAIL_THICKNESS + insets.left }
+            ? { paddingLeft: insets.left, width: LAND_WIDTH }
             : { paddingBottom: insets.bottom, height: BAR_SIZE + insets.bottom }
         ]}
       >
@@ -205,24 +202,22 @@ export const CustomTabBar = ({ state, descriptors, navigation }: Props) => {
                 style={[
                   styles.iconSlot,
                   { 
-                    transform: [
-                      isLandscape ? { translateX: floatAnims[index] } : { translateY: Animated.multiply(floatAnims[index], -1) }
-                    ] 
+                    transform: isLandscape 
+                      ? [{ translateX: Animated.multiply(floatAnims[index], -1) as any }]
+                      : [{ translateY: Animated.multiply(floatAnims[index], -1) as any }]
                   },
                 ]}
               >
                 <TabIcon name={route.name} color={activeColor} size={isFocused ? 26 : 22} />
               </Animated.View>
-              {!isLandscape && (
-                <Animated.Text
-                  style={[
-                    styles.label,
-                    { color: activeColor, transform: [{ scale: labelScale[index] }], fontWeight: isFocused ? '700' : '400' },
-                  ]}
-                >
-                  {label}
-                </Animated.Text>
-              )}
+              <Animated.Text
+                style={[
+                  styles.label,
+                  { color: activeColor, transform: [{ scale: labelScale[index] }], fontWeight: isFocused ? '700' : '400' },
+                ]}
+              >
+                {label}
+              </Animated.Text>
             </Pressable>
           );
         })}
@@ -234,8 +229,8 @@ export const CustomTabBar = ({ state, descriptors, navigation }: Props) => {
 const styles = StyleSheet.create({
   wrapper: { position: 'absolute', zIndex: 9999, elevation: 24, backgroundColor: 'transparent', overflow: 'visible' },
   rowContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', overflow: 'visible' },
-  colContainer: { position: 'absolute', left: 0, top: 0, bottom: 0, flexDirection: 'column', justifyContent: 'center', alignItems: 'center', overflow: 'visible' },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%', padding: 10, overflow: 'visible' },
+  colContainer: { position: 'absolute', left: 0, top: 0, bottom: 0, flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minWidth: LAND_WIDTH, overflow: 'visible' },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', width: '100%', paddingVertical: 10, paddingHorizontal: 2, overflow: 'visible' },
   iconSlot: { alignItems: 'center', justifyContent: 'center', width: 44, height: 44 },
-  label: { fontSize: 10, letterSpacing: 0.4, textTransform: 'capitalize', marginTop: 3 },
+  label: { fontSize: 9, letterSpacing: 0.2, textTransform: 'uppercase', marginTop: 2, textAlign: 'center', width: '90%' },
 });

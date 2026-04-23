@@ -7,6 +7,9 @@ out-tsc
 *.tsbuildinfo
 .expo
 .expo-shared
+.env
+.env.*
+!.env.example
 
 # dependencies
 node_modules

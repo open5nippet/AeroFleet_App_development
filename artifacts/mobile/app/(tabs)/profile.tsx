@@ -3,7 +3,7 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import Head from "expo-router/head";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback, memo } from "react";
 import {
   Alert,
   Platform,
@@ -26,7 +26,7 @@ import { TAB_BAR_OFFSET } from "@/components/CustomTabBar";
 import { useWindowDimensions } from "react-native";
 
 // ─── Achievement Badge ─────────────────────────────────────────────────────
-function AchievementBadge({
+const AchievementBadge = memo(function AchievementBadge({
   icon, label, desc, unlocked, C,
 }: { icon: string; label: string; desc: string; unlocked: boolean; C: ColorScheme }) {
   return (
@@ -66,7 +66,7 @@ const achieveStyles = StyleSheet.create({
 });
 
 
-function MenuItem({
+const MenuItem = memo(function MenuItem({
   icon, label, value, color, onPress, danger, tint, text, textMuted, backgroundCard, border,
 }: {
   icon: string; label: string; value?: string;
@@ -129,7 +129,7 @@ export default function ProfileScreen() {
     })();
   }, []);
 
-  const handlePickImage = async () => {
+  const handlePickImage = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert(
       "Profile Photo",
@@ -175,9 +175,9 @@ export default function ProfileScreen() {
         { text: "Cancel", style: "cancel" }
       ]
     );
-  };
+  }, []);
 
-  const handleSwitchProfile = () => {
+  const handleSwitchProfile = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert("Switch Profile", "Are you sure you want to sign out? This allows another driver to log in on this device.", [
       { text: "Cancel", style: "cancel" },
@@ -192,9 +192,9 @@ export default function ProfileScreen() {
         },
       },
     ]);
-  };
+  }, [isRecording, stopRecording, clearAllEvents, logout]);
 
-  const handleSignOut = () => {
+  const handleSignOut = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Alert.alert("Sign Out", "Are you sure you want to sign out of this device?", [
       { text: "Cancel", style: "cancel" },
@@ -209,19 +209,19 @@ export default function ProfileScreen() {
         },
       },
     ]);
-  };
+  }, [isRecording, stopRecording, clearAllEvents, logout]);
 
-  const handleAlertsToggle = () => {
+  const handleAlertsToggle = useCallback(() => {
     Haptics.selectionAsync();
-    setAlertsEnabled(!alertsEnabled);
-  };
+    setAlertsEnabled((prev) => !prev);
+  }, []);
 
-  const handleUploadToggle = () => {
+  const handleUploadToggle = useCallback(() => {
     Haptics.selectionAsync();
-    setAutoUpload(!autoUpload);
-  };
+    setAutoUpload((prev) => !prev);
+  }, []);
 
-  const handleClipDuration = () => {
+  const handleClipDuration = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert("Clip Duration", "Select loop recording video segment duration.", [
       { text: "1 min", onPress: () => setClipDuration("1 min") },
@@ -230,12 +230,12 @@ export default function ProfileScreen() {
       { text: "10 min", onPress: () => setClipDuration("10 min") },
       { text: "Cancel", style: "cancel" }
     ]);
-  };
+  }, []);
 
-  const handlePrivacy = () => {
+  const handlePrivacy = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert("Privacy Overview", "AeroFleet uses end-to-end encryption. Your telemetry data is only visible to your authorized fleet administrator.", [{text: "I Understand"}]);
-  };
+  }, []);
 
   // Optimize event-based calculations with memoization
   const profileStats = useMemo(() => {
@@ -363,7 +363,7 @@ export default function ProfileScreen() {
               <View style={sessionStyles.stat}>
                 <Text style={[sessionStyles.val, { color: C.danger, fontFamily: "Inter_700Bold" }]}>{events.length}</Text>
                 <Text style={[sessionStyles.label, { color: C.textMuted, fontFamily: "Inter_400Regular" }]}>Events</Text>
-              </View>totalSOS
+              </View>
             </View>
           </View>
         )}

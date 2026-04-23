@@ -290,7 +290,7 @@ export default function EventsScreen() {
             </Text>
           </View>
         }
-        renderItem={({ item }) => <MemoizedEventRow item={item} C={C} />}
+        renderItem={useCallback(({ item }: { item: SafetyEvent }) => <MemoizedEventRow item={item} C={C} />, [C])}
         maxToRenderPerBatch={10}
         updateCellsBatchingPeriod={50}
         initialNumToRender={10}

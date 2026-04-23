@@ -4,6 +4,13 @@ import * as Location from "expo-location";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 
+// Generate a simple unique ID using timestamp and random values
+const generateId = (): string => {
+  const timestamp = Date.now().toString(36);
+  const randomChars = Math.random().toString(36).substring(2, 11);
+  return `${timestamp}-${randomChars}`;
+};
+
 export type EventType = "harsh_brake" | "acceleration" | "crash" | "sos" | "manual";
 
 export type SafetyEvent = {
@@ -149,7 +156,7 @@ export function RecordingProvider({ children }: { children: React.ReactNode }) {
 
   const addEvent = useCallback((type: EventType) => {
     const newEvent: SafetyEvent = {
-      id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+      id: generateId(),
       type,
       timestamp: Date.now(),
       location: gpsCoords,

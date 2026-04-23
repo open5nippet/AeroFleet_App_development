@@ -1,6 +1,6 @@
 import { useVideoPlayer, VideoView } from "expo-video";
 import { router } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import {
   Animated,
   Dimensions,
@@ -37,7 +37,7 @@ export default function IntroScreen() {
     if (videoSource) p.play();
   });
 
-  const navigateToLogin = () => {
+  const navigateToLogin = useCallback(() => {
     Animated.timing(overlayOpacity, {
       toValue: 1,
       duration: 600,
@@ -45,7 +45,7 @@ export default function IntroScreen() {
     }).start(() => {
       router.replace("/login");
     });
-  };
+  }, [overlayOpacity]);
 
   useEffect(() => {
     const native = Platform.OS !== "web";
@@ -61,7 +61,7 @@ export default function IntroScreen() {
 
     const timeout = setTimeout(navigateToLogin, 6000);
     return () => clearTimeout(timeout);
-  }, []);
+  }, [navigateToLogin]);
 
   useEffect(() => {
     if (!player) return;
@@ -71,7 +71,7 @@ export default function IntroScreen() {
       }
     });
     return () => sub.remove();
-  }, [player]);
+  }, [player, navigateToLogin]);
 
   return (
     <View style={styles.container}>

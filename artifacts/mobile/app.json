@@ -41,7 +41,8 @@
       "expo-font",
       "expo-web-browser",
       "expo-camera",
-      "expo-video"
+      "expo-video",
+      "@rnmapbox/maps"
     ],
     "experiments": {
       "typedRoutes": true,
