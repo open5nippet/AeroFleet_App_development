@@ -46,21 +46,21 @@ The application features a fully custom **Space HUD** UI theme, abandoning stand
 ## 📂 Project Structure
 
 ```text
-├── artifacts/
+├── apps/
 │   ├── mobile/              # Expo React Native app
 │   │   ├── app/             # Expo Router screens
 │   │   │   ├── (tabs)/      # Bottom tab navigation (dashboard, camera, map, events, profile)
 │   │   │   ├── index.tsx    # Auth redirect entry
-│   │   │   ├── intro.tsx    # Intro splash screen
 │   │   │   └── login.tsx    # Secure driver login (glass inputs, animations)
 │   │   ├── components/      # Shared UI (RNMapView, ErrorBoundary)
 │   │   ├── constants/       # Color tokens and Space HUD themes
 │   │   ├── context/         # Global State (Auth, Recording, Theme)
 │   │   └── services/        # Mapbox geocoding & Map routing APIs
 │   └── api-server/          # Express REST API backend (Work in Progress)
-│       └── src/             
-├── lib/
+│       └── src/
+├── packages/
 │   ├── api-client-react/    # Auto-generated React Query API client
+│   ├── api-zod/             # Shared Zod validation schemas
 │   └── db/                  # Drizzle ORM schema and database setup
 └── pnpm-workspace.yaml      # Monorepo configuration
 ```
@@ -95,19 +95,24 @@ pnpm install
 ```
 
 ### 2. Environment Variables
-To enable map search and routing, you are required to provide a Mapbox Access Token. Create a `.env` file inside `artifacts/mobile/`:
+To enable map search and routing, you are required to provide a Mapbox Access Token. Create a `.env` file inside `apps/mobile/`:
 ```env
-# artifacts/mobile/.env
+# apps/mobile/.env
 EXPO_PUBLIC_MAPBOX_KEY=your_mapbox_public_token_here
 ```
 
 ### 3. Run the Mobile App Locally
 Fire up the Expo development server:
 ```bash
-cd artifacts/mobile
+cd apps/mobile
 pnpm dev
 ```
 Once the server starts, **scan the QR code** using your phone's camera (iOS) or the Expo Go app (Android).
+
+> ⚠️ **First run after any folder restructuring?** Clear the Metro cache:
+> ```bash
+> npx expo start -c
+> ```
 
 ---
 
