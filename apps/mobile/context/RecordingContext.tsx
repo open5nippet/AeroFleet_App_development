@@ -86,6 +86,14 @@ export function RecordingProvider({ children }: { children: React.ReactNode }) {
     setSpeed(0);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+    // Defensive cleanup to prevent interval/listener leaks if called multiple times
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (sensorRef.current) clearInterval(sensorRef.current);
+    if (locationSubRef.current) {
+      locationSubRef.current.remove();
+      locationSubRef.current = null;
+    }
+
     timerRef.current = setInterval(() => {
       setRecordingDuration((d) => d + 1);
     }, 1000);
@@ -164,7 +172,8 @@ export function RecordingProvider({ children }: { children: React.ReactNode }) {
     };
     setEvents((prev) => {
       const updated = [newEvent, ...prev];
-      saveEvents(updated);
+      // Defer storage write outside the pure state updater to avoid double-invocations in Strict Mode
+      Promise.resolve().then(() => saveEvents(updated));
       return updated;
     });
     setUnreadCount((c) => c + 1);

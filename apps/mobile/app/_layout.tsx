@@ -26,7 +26,6 @@ function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
-      <Stack.Screen name="intro" />
       <Stack.Screen name="login" />
       <Stack.Screen name="(tabs)" />
     </Stack>
