@@ -11,6 +11,7 @@ type Props = {
   isDark: boolean;
   isRecording: boolean;
   is3D: boolean;
+  mapStyle: "traffic" | "satellite" | "standard";
   originCoords: Coordinates | null;
   destCoords: Coordinates | null;
   route: RouteResult | null;
@@ -24,6 +25,7 @@ export default function RNMapView({
   isDark,
   isRecording,
   is3D,
+  mapStyle,
   originCoords,
   destCoords,
   route,
@@ -78,7 +80,16 @@ export default function RNMapView({
       style={StyleSheet.absoluteFill} 
       logoEnabled={false} 
       scaleBarEnabled={false}
-      styleURL={isDark ? Mapbox.StyleURL.TrafficNight : Mapbox.StyleURL.TrafficDay}
+      compassEnabled={true}
+      compassViewPosition={1}
+      compassViewMargins={{ x: 20, y: 70 }}
+      styleURL={
+        mapStyle === "satellite" 
+          ? Mapbox.StyleURL.SatelliteStreet 
+          : mapStyle === "standard" 
+            ? (isDark ? Mapbox.StyleURL.Dark : Mapbox.StyleURL.Street) 
+            : (isDark ? Mapbox.StyleURL.TrafficNight : Mapbox.StyleURL.TrafficDay)
+      }
     >
       <Mapbox.Camera {...cameraProps} />
       
@@ -126,6 +137,25 @@ export default function RNMapView({
             }}
           />
         </Mapbox.ShapeSource>
+      )}
+
+      {/* 3D Buildings Layer attached directly to the style's built-in composite source */}
+      {mapStyle !== "satellite" && (
+        <Mapbox.FillExtrusionLayer
+          id="building3d"
+          sourceID="composite"
+          sourceLayerID="building"
+          minZoomLevel={15}
+          maxZoomLevel={24}
+          filter={["==", "extrude", "true"]}
+          style={{
+            fillExtrusionOpacity: 0.8,
+            fillExtrusionColor: isDark ? "#2a2a2a" : "#e2e2e2",
+            fillExtrusionHeight: ["get", "height"],
+            fillExtrusionBase: ["get", "min_height"],
+            fillExtrusionColorTransition: { duration: 2000, delay: 0 },
+          }}
+        />
       )}
     </Mapbox.MapView>
   );

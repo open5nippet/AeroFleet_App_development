@@ -11,6 +11,7 @@ type Props = {
   isDark?: boolean;
   isRecording?: boolean;
   is3D?: boolean;
+  mapStyle: "traffic" | "satellite" | "standard";
   originCoords: Coordinates | null;
   destCoords: Coordinates | null;
   route: RouteResult | null;

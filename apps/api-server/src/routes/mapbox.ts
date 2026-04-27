@@ -54,6 +54,29 @@ router.post("/geocode", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
+  // --- TIER 1: INTERNAL CUSTOM FLEET LABELS RESOLUTION ---
+  // In production, this would query the Postgres database for fleet waypoints.
+  const normalizedQuery = query.trim().toLowerCase();
+  const customWaypoints: Record<string, [number, number]> = {
+    "hub a": [77.0266, 28.4595],
+    "depot 4": [77.3485, 28.8835],
+    "driver home": [77.1025, 28.7041],
+  };
+
+  for (const [label, coords] of Object.entries(customWaypoints)) {
+    if (normalizedQuery.includes(label)) {
+      res.json({
+        results: [{
+          id: `fleet_label_${label.replace(/\s+/g, '_')}`,
+          place_name: `${label.toUpperCase()} (Internal Fleet Waypoint)`,
+          center: coords,
+        }]
+      });
+      return;
+    }
+  }
+  // -------------------------------------------------------
+
   try {
     const encoded = encodeURIComponent(query);
     const url = new URL(

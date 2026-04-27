@@ -21,8 +21,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import RNMapView from "@/components/RNMapView";
+import { OpenLocationCode } from "open-location-code";
 import { ColorScheme } from "@/constants/colors";
 import { useTheme } from "@/context/ThemeContext";
 import { useRecording } from "@/context/RecordingContext";
@@ -65,6 +65,8 @@ const SuggestionItem = memo(function SuggestionItem({ item, onPress, C }: { item
   );
 });
 
+type MapStyle = "traffic" | "satellite" | "standard";
+
 export default function MapScreen() {
   const { colors: C } = useTheme();
   const { isRecording, startRecording, stopRecording, gpsCoords } = useRecording();
@@ -92,6 +94,7 @@ export default function MapScreen() {
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [locPermission, requestLocPermission] = Location.useForegroundPermissions();
   const [is3D, setIs3D] = useState(false);
+  const [mapStyle, setMapStyle] = useState<MapStyle>("traffic");
   const cardAnim = useRef(new Animated.Value(0)).current;
   const topUiAnim = useRef(new Animated.Value(1)).current;
 
@@ -126,8 +129,42 @@ export default function MapScreen() {
   const search = useCallback((text: string) => {
     if (searchDebounce.current) clearTimeout(searchDebounce.current);
     if (!text.trim() || text.length < 2) { setSuggestions([]); return; }
+    
     setLoadingSugg(true);
     searchDebounce.current = setTimeout(async () => {
+      // 1. Check for Raw GPS (e.g. "28.4595, 77.0266" or "28.4595 77.0266")
+      const gpsMatch = text.match(/^(-?\d+(\.\d+)?)[,\s]+(-?\d+(\.\d+)?)$/);
+      if (gpsMatch) {
+        const lat = parseFloat(gpsMatch[1]);
+        const lng = parseFloat(gpsMatch[3]);
+        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          setSuggestions([{
+            id: "gps_coords",
+            place_name: `${lat.toFixed(5)}, ${lng.toFixed(5)} (GPS Coordinates)`,
+            center: [lng, lat],
+          } as GeocodeResult]);
+          setLoadingSugg(false);
+          return;
+        }
+      }
+
+      // 2. Check for Plus Code (e.g. "7X2G+W5")
+      try {
+        if (OpenLocationCode.isValid(text.toUpperCase()) && OpenLocationCode.isFull(text.toUpperCase())) {
+          const decoded = OpenLocationCode.decode(text.toUpperCase());
+          setSuggestions([{
+            id: "pluscode",
+            place_name: `${text.toUpperCase()} (Plus Code)`,
+            center: [decoded.longitudeCenter, decoded.latitudeCenter],
+          } as GeocodeResult]);
+          setLoadingSugg(false);
+          return;
+        }
+      } catch (e) {
+        // Not a plus code
+      }
+
+      // 3. Fallback to normal geocoding
       const results = await geocodePlace(text);
       setSuggestions(results);
       setLoadingSugg(false);
@@ -415,6 +452,7 @@ export default function MapScreen() {
                 isDark={C.isDark}
                 isRecording={isRecording}
                 is3D={is3D}
+                mapStyle={mapStyle}
                 originCoords={originCoords}
                 destCoords={destCoords}
                 route={route}
@@ -434,6 +472,7 @@ export default function MapScreen() {
         isDark={C.isDark}
         isRecording={isRecording}
         is3D={is3D}
+        mapStyle={mapStyle}
         originCoords={originCoords}
         destCoords={destCoords}
         route={route}
@@ -490,11 +529,28 @@ export default function MapScreen() {
         style={[
           styles.fabContainer,
           {
-            bottom: isLandscape ? 80 : bottomPad + (route ? 180 : 86),
-            right: 20,
+            top: topPad + 140,
+            right: 16,
+            gap: 12,
           },
         ]}
       >
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setMapStyle((c) => (c === "traffic" ? "satellite" : c === "satellite" ? "standard" : "traffic"));
+          }}
+          style={[
+            styles.fab,
+            {
+              backgroundColor: C.backgroundCard,
+              borderColor: C.border,
+            },
+          ]}
+        >
+          <Ionicons name="layers" size={20} color={C.tint} />
+        </Pressable>
+
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -505,7 +561,6 @@ export default function MapScreen() {
             {
               backgroundColor: C.backgroundCard,
               borderColor: C.border,
-              marginBottom: !locPermission?.granted ? 12 : 0,
             },
           ]}
         >
@@ -564,7 +619,7 @@ const styles = StyleSheet.create({
   routeDivider: { width: 1, height: 44, marginHorizontal: 6 },
   clearBtn: { width: 36, height: 36, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   fabContainer: { position: "absolute", alignItems: "center" },
-  fab: { width: 52, height: 52, borderRadius: 26, borderWidth: 1, alignItems: "center", justifyContent: "center", elevation: 4, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+  fab: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: "center", justifyContent: "center", elevation: 4, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
   startBtn: { borderRadius: 14, overflow: "hidden" },
   startBtnInner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 50 },
   startBtnText: { color: "#fff", fontSize: 16 },
