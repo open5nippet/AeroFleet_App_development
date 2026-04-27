@@ -8,7 +8,9 @@ const C = Colors.light;
 const API_BASE = process.env.EXPO_PUBLIC_API_URL;
 
 type Props = {
-  mapRef?: React.RefObject<any>;
+  isDark?: boolean;
+  isRecording?: boolean;
+  is3D?: boolean;
   originCoords: Coordinates | null;
   destCoords: Coordinates | null;
   route: RouteResult | null;

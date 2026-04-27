@@ -67,7 +67,7 @@ const SuggestionItem = memo(function SuggestionItem({ item, onPress, C }: { item
 
 export default function MapScreen() {
   const { colors: C } = useTheme();
-  const { isRecording, startRecording, stopRecording } = useRecording();
+  const { isRecording, startRecording, stopRecording, gpsCoords } = useRecording();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
@@ -75,7 +75,6 @@ export default function MapScreen() {
   const bottomPad = IS_WEB ? 34 : insets.bottom;
   const isSmall = width < 380;
 
-  const mapRef = useRef<any>(null);
   const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [originText, setOriginText] = useState("");
@@ -92,10 +91,22 @@ export default function MapScreen() {
   const [routeError, setRouteError] = useState("");
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [locPermission, requestLocPermission] = Location.useForegroundPermissions();
+  const [is3D, setIs3D] = useState(false);
   const cardAnim = useRef(new Animated.Value(0)).current;
   const topUiAnim = useRef(new Animated.Value(1)).current;
 
-  // Navigation Camera Animation Effect
+  useEffect(() => {
+    setIs3D(isRecording);
+  }, [isRecording]);
+
+  // Sync live GPS coords from RecordingContext into userLocation during navigation
+  useEffect(() => {
+    if (isRecording && gpsCoords) {
+      setUserLocation({ latitude: gpsCoords.lat, longitude: gpsCoords.lng });
+    }
+  }, [isRecording, gpsCoords]);
+
+  // Navigation Top UI Animation Effect
   React.useEffect(() => {
     Animated.spring(topUiAnim, {
       toValue: isRecording ? 0 : 1,
@@ -103,27 +114,7 @@ export default function MapScreen() {
       friction: 12,
       useNativeDriver: true,
     }).start();
-
-    if (!IS_WEB && mapRef.current) {
-      if (isRecording) {
-        setTimeout(() => {
-          mapRef.current?.animateCamera?.({
-            center: userLocation || originCoords || { latitude: 28.6139, longitude: 77.209 },
-            pitch: 65,
-            zoom: 18.5,
-            heading: 0,
-          }, { duration: 1500 });
-        }, 100);
-      } else if (route) {
-        setTimeout(() => {
-          mapRef.current?.fitToCoordinates?.(route.coordinates, {
-            edgePadding: { top: 120, right: 40, bottom: isSmall ? 280 : 320, left: 40 },
-            animated: true,
-          });
-        }, 100);
-      }
-    }
-  }, [isRecording]);
+  }, [isRecording, topUiAnim]);
 
   // Cleanup debounce timeout on unmount to prevent memory leak
   useEffect(() => {
@@ -190,12 +181,6 @@ export default function MapScreen() {
       } else {
         setRoute(result);
         Animated.spring(cardAnim, { toValue: 1, tension: 80, friction: 9, useNativeDriver: !IS_WEB }).start();
-        if (!IS_WEB) {
-          mapRef.current?.fitToCoordinates(result.coordinates, {
-            edgePadding: { top: 100, right: 40, bottom: isSmall ? 240 : 280, left: 40 },
-            animated: true,
-          });
-        }
       }
     } catch {
       setRouteError("Network error. Please try again.");
@@ -427,6 +412,9 @@ export default function MapScreen() {
           {(originCoords || destCoords) && (
             <View style={[styles.webMapBox, { borderColor: route ? C.borderStrong : C.border }]}>
               <RNMapView
+                isDark={C.isDark}
+                isRecording={isRecording}
+                is3D={is3D}
                 originCoords={originCoords}
                 destCoords={destCoords}
                 route={route}
@@ -443,7 +431,9 @@ export default function MapScreen() {
     <View style={styles.container}>
       <StatusBar hidden={isLandscape} style={C.isDark ? "light" : "dark"} />
       <RNMapView
-        mapRef={mapRef}
+        isDark={C.isDark}
+        isRecording={isRecording}
+        is3D={is3D}
         originCoords={originCoords}
         destCoords={destCoords}
         route={route}
@@ -496,22 +486,49 @@ export default function MapScreen() {
         </View>
       )}
 
-      {!locPermission?.granted && (
+      <View
+        style={[
+          styles.fabContainer,
+          {
+            bottom: isLandscape ? 80 : bottomPad + (route ? 180 : 86),
+            right: 20,
+          },
+        ]}
+      >
         <Pressable
-          onPress={useMyLocation}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setIs3D(!is3D);
+          }}
           style={[
-            styles.locFab,
+            styles.fab,
             {
-              bottom: isLandscape ? 80 : bottomPad + (route ? 180 : 86),
-              right: 20,
               backgroundColor: C.backgroundCard,
               borderColor: C.border,
+              marginBottom: !locPermission?.granted ? 12 : 0,
             },
           ]}
         >
-          <Ionicons name="locate" size={22} color={C.tint} />
+          <Text style={{ fontFamily: "Inter_700Bold", color: C.tint, fontSize: 14 }}>
+            {is3D ? "2D" : "3D"}
+          </Text>
         </Pressable>
-      )}
+
+        {!locPermission?.granted && (
+          <Pressable
+            onPress={useMyLocation}
+            style={[
+              styles.fab,
+              {
+                backgroundColor: C.backgroundCard,
+                borderColor: C.border,
+              },
+            ]}
+          >
+            <Ionicons name="locate" size={22} color={C.tint} />
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
@@ -546,7 +563,8 @@ const styles = StyleSheet.create({
   routeStatLabel: { fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 },
   routeDivider: { width: 1, height: 44, marginHorizontal: 6 },
   clearBtn: { width: 36, height: 36, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  locFab: { position: "absolute", width: 52, height: 52, borderRadius: 26, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  fabContainer: { position: "absolute", alignItems: "center" },
+  fab: { width: 52, height: 52, borderRadius: 26, borderWidth: 1, alignItems: "center", justifyContent: "center", elevation: 4, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
   startBtn: { borderRadius: 14, overflow: "hidden" },
   startBtnInner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 50 },
   startBtnText: { color: "#fff", fontSize: 16 },

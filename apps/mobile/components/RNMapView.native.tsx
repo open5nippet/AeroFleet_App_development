@@ -1,13 +1,16 @@
 import React, { useEffect } from "react";
 import { StyleSheet, View, Text } from "react-native";
 import Mapbox from "@rnmapbox/maps";
+import { UserTrackingMode } from "@rnmapbox/maps";
 
 import type { Coordinates, RouteResult } from "@/services/mapbox";
 
 Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_KEY || "");
 
 type Props = {
-  mapRef: React.RefObject<any>;
+  isDark: boolean;
+  isRecording: boolean;
+  is3D: boolean;
   originCoords: Coordinates | null;
   destCoords: Coordinates | null;
   route: RouteResult | null;
@@ -18,27 +21,68 @@ type Props = {
 const DEFAULT_CENTER = [77.209, 28.6139];
 
 export default function RNMapView({
-  mapRef,
+  isDark,
+  isRecording,
+  is3D,
   originCoords,
   destCoords,
   route,
   userLocation,
   hasLocationPermission,
 }: Props) {
+  const cameraProps = React.useMemo(() => {
+    if (isRecording) {
+      return {
+        followUserLocation: true,
+        followUserMode: UserTrackingMode.FollowWithCourse,
+        followZoomLevel: is3D ? 18.5 : 16,
+        followPitch: is3D ? 65 : 0,
+        animationDuration: 1500,
+        animationMode: "flyTo" as const,
+      };
+    }
+
+    if (route && route.coordinates.length > 0) {
+      const lats = route.coordinates.map((c) => c.latitude);
+      const lngs = route.coordinates.map((c) => c.longitude);
+      return {
+        bounds: {
+          ne: [Math.max(...lngs), Math.max(...lats)],
+          sw: [Math.min(...lngs), Math.min(...lats)],
+          paddingTop: 120,
+          paddingRight: 40,
+          paddingBottom: 320,
+          paddingLeft: 40,
+        },
+        pitch: is3D ? 65 : 0,
+        animationDuration: 1500,
+        animationMode: "flyTo" as const,
+      };
+    }
+
+    return {
+      zoomLevel: 12,
+      pitch: is3D ? 65 : 0,
+      centerCoordinate: userLocation
+        ? [userLocation.longitude, userLocation.latitude]
+        : originCoords
+          ? [originCoords.longitude, originCoords.latitude]
+          : DEFAULT_CENTER,
+      animationDuration: 1000,
+      animationMode: "flyTo" as const,
+    };
+  }, [route, userLocation, originCoords, isRecording, is3D]);
+
   return (
-    <Mapbox.MapView style={StyleSheet.absoluteFill} logoEnabled={false} scaleBarEnabled={false}>
-      <Mapbox.Camera
-        zoomLevel={12}
-        centerCoordinate={
-          userLocation
-            ? [userLocation.longitude, userLocation.latitude]
-            : DEFAULT_CENTER
-        }
-        animationMode="flyTo"
-        animationDuration={2000}
-      />
+    <Mapbox.MapView 
+      style={StyleSheet.absoluteFill} 
+      logoEnabled={false} 
+      scaleBarEnabled={false}
+      styleURL={isDark ? Mapbox.StyleURL.TrafficNight : Mapbox.StyleURL.TrafficDay}
+    >
+      <Mapbox.Camera {...cameraProps} />
       
-      {userLocation && hasLocationPermission && (
+      {(isRecording || (userLocation && hasLocationPermission)) && (
         <Mapbox.UserLocation visible={true} showsUserHeadingIndicator={true} />
       )}
 
