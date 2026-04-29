@@ -126,6 +126,30 @@ export default function MapScreen() {
     };
   }, []);
 
+  // Auto-detect location on mount
+  useEffect(() => {
+    let mounted = true;
+    const initLocation = async () => {
+      try {
+        let perm = await Location.getForegroundPermissionsAsync();
+        if (perm.status !== 'granted') {
+          perm = await Location.requestForegroundPermissionsAsync();
+        }
+        if (perm.status === 'granted' && mounted && !originCoords) {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          const coords: Coordinates = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+          setUserLocation(coords);
+          setOriginCoords(coords);
+          setOriginText("My Location");
+        }
+      } catch (error) {
+        console.error('[Map] Failed to auto-locate on mount:', error);
+      }
+    };
+    initLocation();
+    return () => { mounted = false; };
+  }, []);
+
   const search = useCallback((text: string) => {
     if (searchDebounce.current) clearTimeout(searchDebounce.current);
     if (!text.trim() || text.length < 2) { setSuggestions([]); return; }

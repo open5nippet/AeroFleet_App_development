@@ -5,17 +5,8 @@ const router = Router();
 
 const MAPBOX_KEY = process.env.MAPBOX_SECRET_KEY;
 const MAPBOX_BASE = "https://api.mapbox.com";
+const GOOGLE_MAPS_KEY = process.env.GOOGLE_MAPS_KEY;
 
-// Validation schemas for Mapbox API responses
-const GeocodingFeatureSchema = z.object({
-  id: z.string(),
-  place_name: z.string(),
-  center: z.tuple([z.number(), z.number()]),
-});
-
-const GeocodingResponseSchema = z.object({
-  features: z.array(GeocodingFeatureSchema).optional(),
-});
 
 const RouteGeometrySchema = z.object({
   coordinates: z.array(z.tuple([z.number(), z.number()])),
@@ -37,8 +28,8 @@ const DirectionsResponseSchema = z.object({
  * Body: { query: string, country?: string, bbox?: string }
  */
 router.post("/geocode", async (req: Request, res: Response): Promise<void> => {
-  if (!MAPBOX_KEY) {
-    res.status(500).json({ error: "Mapbox key not configured" });
+  if (!GOOGLE_MAPS_KEY) {
+    res.status(500).json({ error: "Google Maps key not configured" });
     return;
   }
 
@@ -78,33 +69,42 @@ router.post("/geocode", async (req: Request, res: Response): Promise<void> => {
   // -------------------------------------------------------
 
   try {
-    const encoded = encodeURIComponent(query);
-    const url = new URL(
-      `/geocoding/v5/mapbox.places/${encoded}.json`,
-      MAPBOX_BASE
-    );
-    url.searchParams.set("access_token", MAPBOX_KEY);
-    url.searchParams.set("limit", "5");
-    url.searchParams.set("types", "place,address,poi,locality,neighborhood");
-    url.searchParams.set("country", country);
-    url.searchParams.set("bbox", bbox);
+    const url = new URL("https://places.googleapis.com/v1/places:searchText");
+    
+    const requestBody: any = {
+      textQuery: query
+    };
 
-    const response = await fetch(url.toString());
+    // Add region code if country is provided (Places API New uses regionCode)
+    if (country) {
+      requestBody.regionCode = country.toUpperCase();
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": GOOGLE_MAPS_KEY,
+        "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location"
+      },
+      body: JSON.stringify(requestBody)
+    });
+
     if (!response.ok) {
-      throw new Error(`Mapbox API error: ${response.statusText}`);
+      throw new Error(`Google Places API (New) error: ${response.statusText}`);
     }
 
     const data = await response.json();
-    const validatedData = GeocodingResponseSchema.parse(data);
-    const results = (validatedData.features || []).map((f: any) => ({
+
+    const results = (data.places || []).slice(0, 5).map((f: any) => ({
       id: f.id,
-      place_name: f.place_name,
-      center: f.center, // [lng, lat]
+      place_name: f.displayName?.text ? `${f.displayName.text}, ${f.formattedAddress || ''}`.replace(/,\s*$/, '') : f.formattedAddress,
+      center: [f.location.longitude, f.location.latitude], // [lng, lat]
     }));
 
     res.json({ results });
   } catch (error) {
-    console.error("[Mapbox Geocode]", error);
+    console.error("[Google Maps Geocode]", error);
     res.status(500).json({ error: "Geocoding failed", results: [] });
   }
 });
