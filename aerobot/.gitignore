@@ -1,0 +1,113 @@
+# ==============================================================================
+# AeroBot - Flutter Application Git Ignore
+# This file is located inside the aerobot/ directory.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Flutter / Dart
+# ------------------------------------------------------------------------------
+# Ignore Dart tool folders and packages directories
+.dart_tool/
+.packages
+.pub/
+.pub-cache/
+
+# Ignore build directories and code coverage reports
+build/
+coverage/
+
+# Ignore Flutter-specific generated plugin files
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# ------------------------------------------------------------------------------
+# IDE & Editors
+# ------------------------------------------------------------------------------
+# Android Studio / IntelliJ IDEA settings
+.idea/
+*.iml
+
+# VS Code settings
+.vscode/
+
+# ------------------------------------------------------------------------------
+# Operating System
+# ------------------------------------------------------------------------------
+# macOS system files
+.DS_Store
+
+# Windows system files
+Thumbs.db
+
+# ------------------------------------------------------------------------------
+# Logs
+# ------------------------------------------------------------------------------
+# Ignore all log files
+*.log
+
+# ------------------------------------------------------------------------------
+# Build Artifacts
+# ------------------------------------------------------------------------------
+# Ignore compiled binaries/packages
+*.apk
+*.aab
+*.ipa
+
+# ------------------------------------------------------------------------------
+# Android
+# ------------------------------------------------------------------------------
+# Ignore Gradle caches and local config
+android/.gradle/
+android/local.properties
+android/key.properties
+
+# Ignore Android signing keystore files
+*.jks
+*.keystore
+
+# ------------------------------------------------------------------------------
+# iOS
+# ------------------------------------------------------------------------------
+# Ignore CocoaPods dependency files
+ios/Pods/
+ios/.symlinks/
+
+# Ignore iOS build frameworks and generated configurations
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+
+# ------------------------------------------------------------------------------
+# Environment & Secrets
+# ------------------------------------------------------------------------------
+# Ignore local environment variable files
+.env
+.env.*
+*.env
+
+# ------------------------------------------------------------------------------
+# Firebase Configuration
+# ------------------------------------------------------------------------------
+# Ignore Firebase configuration files containing API keys and project settings
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# ------------------------------------------------------------------------------
+# Temporary Files
+# ------------------------------------------------------------------------------
+# Ignore general temporary and backup files
+*.tmp
+*.temp
+
+# ==============================================================================
+# Explicit Rules (Do Not Ignore)
+# ==============================================================================
+# The following files and directories are critical for the application and MUST 
+# be committed to ensure clean building and tracking.
+!lib/
+!assets/
+!pubspec.yaml
+!pubspec.lock
+!README.md
+!docs/
+!analysis_options.yaml
